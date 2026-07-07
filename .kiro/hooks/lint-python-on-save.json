@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Lint Python on Save",
+      "description": "Esegue ruff check sui file Python modificati per catturare errori di stile e bug immediatamente",
+      "trigger": "PostFileSave",
+      "matcher": ".*[^/]*\\.py$",
+      "action": {
+        "type": "command",
+        "command": "uv run ruff check --fix ."
+      },
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Run Tests After Task",
+      "description": "Esegue pytest dopo il completamento di ogni task della spec per garantire che il codice nuovo non rompa nulla",
+      "trigger": "PostTaskExec",
+      "action": {
+        "type": "command",
+        "command": "uv run pytest -x -q"
+      },
+      "enabled": true
+    }
+  ]
+}
