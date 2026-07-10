@@ -2,7 +2,7 @@
 
 A Telegram bot that lets you log fuel fill-ups, service records, and odometer readings to [LubeLogger](https://github.com/hargata/lubelogger) — right from your phone. No web UI needed.
 
-**Why this exists:** Logging a quick refuel shouldn't require opening a browser. This bot gives you fast, command-based data entry with offline resilience (records queue locally when LubeLogger is down) and ships as a single Docker container alongside your existing setup.
+**Why this exists:** Logging a refuel shouldn't mean opening a browser, navigating to your LubeLogger instance, and filling out a form. With this bot, you send a Telegram message and you're done. It also works great when your LubeLogger runs on a home server with no public access — the bot sits next to it on the same network, and Telegram bridges the gap from anywhere. If LubeLogger is temporarily down, records queue locally and sync later.
 
 ## Quick Start
 
