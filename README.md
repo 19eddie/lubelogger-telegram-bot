@@ -8,7 +8,7 @@ A Telegram bot that lets you log fuel fill-ups, service records, and odometer re
 
 1. **Create a Telegram bot** via [@BotFather](https://t.me/BotFather) and grab your token.
 
-2. **Enable the LubeLogger API key** in your LubeLogger instance (Settings → API).
+2. **(Recommended)** Enable authentication in LubeLogger ([guide](https://docs.lubelogger.com/Installation/Authentication/)) and create an API key with Editor scope ([API docs](https://docs.lubelogger.com/Advanced/API/)). If auth is disabled, skip this step.
 
 3. **Get your Telegram user ID** — send `/start` to [@userinfobot](https://t.me/userinfobot).
 
@@ -16,7 +16,7 @@ A Telegram bot that lets you log fuel fill-ups, service records, and odometer re
    ```env
    TELEGRAM_BOT_TOKEN=your-token
    LUBELOGGER_URL=http://lubelogger:8080
-   LUBELOGGER_API_KEY=your-api-key
+   LUBELOGGER_API_KEY=your-api-key  # omit if auth is disabled
    ALLOWED_USER_IDS=123456789
    ```
 
@@ -62,7 +62,7 @@ All data-entry commands also work without arguments — the bot will guide you t
 |----------|----------|---------|-------------|
 | `TELEGRAM_BOT_TOKEN` | Yes | — | Bot token from @BotFather |
 | `LUBELOGGER_URL` | Yes | — | LubeLogger base URL (e.g. `http://lubelogger:8080`) |
-| `LUBELOGGER_API_KEY` | Yes | — | API key from LubeLogger settings |
+| `LUBELOGGER_API_KEY` | No | — | API key from LubeLogger settings. Required only if authentication is enabled ([docs](https://docs.lubelogger.com/Advanced/API/)) |
 | `ALLOWED_USER_IDS` | Yes | — | Comma-separated Telegram user IDs |
 | `DB_PATH` | No | `/data/bot.db` | SQLite database file path |
 | `QUEUE_RETRY_INTERVAL` | No | `300` | Seconds between queue retry attempts |

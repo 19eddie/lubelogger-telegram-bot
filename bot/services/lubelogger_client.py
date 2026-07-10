@@ -21,9 +21,12 @@ class LubeLoggerClient:
     """Async HTTP client for LubeLogger API with shared connection pool."""
 
     def __init__(self, base_url: str, api_key: str, timeout: int = 10) -> None:
+        headers: dict[str, str] = {}
+        if api_key:
+            headers["x-api-key"] = api_key
         self._client = httpx.AsyncClient(
             base_url=base_url,
-            headers={"x-api-key": api_key},
+            headers=headers,
             timeout=timeout,
         )
 

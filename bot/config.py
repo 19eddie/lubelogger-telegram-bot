@@ -60,7 +60,7 @@ class BotConfig(BaseSettings):
 
     telegram_bot_token: str
     lubelogger_url: str
-    lubelogger_api_key: str
+    lubelogger_api_key: str = ""
     allowed_user_ids: list[int]
     queue_retry_interval: int = 300
     http_timeout: int = 10
