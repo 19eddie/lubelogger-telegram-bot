@@ -165,6 +165,27 @@ uv run ruff format .
   - Builds and publishes multi-arch image (`linux/amd64`, `linux/arm64`) to GHCR
   - Produces SBOM and provenance attestations
 
+### Manual repository configuration required
+
+Before relying on the release automation, configure the repository explicitly:
+
+1. **Branch protection for `main`**
+   - Require status checks:
+     - `CI / Lint (Python 3.12)`
+     - `CI / Tests (Python 3.11)`
+     - `CI / Tests (Python 3.12)`
+     - `Conventional Commits / Validate commit messages`
+2. **Allow release pushes to `main`**
+   - The release workflow uses `@semantic-release/git` to commit `CHANGELOG.md` and `pyproject.toml` back to `main`.
+   - If branch protection blocks direct pushes from GitHub Actions, grant bypass permission to Actions (or disable the git commit plugin).
+3. **Workflow permissions**
+   - Keep workflow permissions enabled for `GITHUB_TOKEN`.
+   - `release.yml` needs `contents: write`.
+   - `publish-image.yml` needs `packages: write` to publish to GHCR.
+4. **Secrets and environment variables**
+   - No extra custom repository secrets are required for release/publish.
+   - Workflows use the default `secrets.GITHUB_TOKEN`.
+
 ### GHCR image tags
 
 Images are published to:
