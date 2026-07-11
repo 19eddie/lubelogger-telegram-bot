@@ -139,6 +139,76 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+### Commit & merge policy
+
+- Use **Conventional Commits** (`feat:`, `fix:`, `chore:`, etc.) for all commits merged in `main`.
+- Pull requests are expected to pass these required checks:
+  - `CI / Lint (Python 3.12)`
+  - `CI / Tests (Python 3.11)`
+  - `CI / Tests (Python 3.12)`
+  - `Conventional Commits / Validate commit messages`
+- Configure branch protection on `main` to require all checks above before merge.
+
+### CI/CD and releases
+
+- `CI` workflow runs on pull requests and pushes to `main`:
+  - Ruff lint checks
+  - Test suite on Python 3.11 and 3.12
+- `Release` workflow runs on pushes to `main`:
+  - Re-runs lint and tests
+  - Executes **semantic-release** (Node) to:
+    - compute semantic version from commit history
+    - create/update `CHANGELOG.md`
+    - update `pyproject.toml` version
+    - create Git tag and GitHub Release
+- `Publish Docker image` workflow runs when a release tag (`v*`) is pushed:
+  - Builds and publishes multi-arch image (`linux/amd64`, `linux/arm64`) to GHCR
+  - Produces SBOM and provenance attestations
+
+### Manual repository configuration required
+
+Before relying on the release automation, configure the repository explicitly:
+
+1. **Branch protection for `main`**
+   - Require status checks:
+     - `CI / Lint (Python 3.12)`
+     - `CI / Tests (Python 3.11)`
+     - `CI / Tests (Python 3.12)`
+     - `Conventional Commits / Validate commit messages`
+2. **Allow release pushes to `main`**
+   - The release workflow uses `@semantic-release/git` to commit `CHANGELOG.md` and `pyproject.toml` back to `main`.
+   - If branch protection blocks direct pushes from GitHub Actions, grant bypass permission to Actions (or disable the git commit plugin).
+3. **Workflow permissions**
+   - Keep workflow permissions enabled for `GITHUB_TOKEN`.
+   - `release.yml` needs `contents: write`.
+   - `publish-image.yml` needs `packages: write` to publish to GHCR.
+4. **Secrets and environment variables**
+   - No extra custom repository secrets are required for release/publish.
+   - Workflows use the default `secrets.GITHUB_TOKEN`.
+
+### GHCR image tags
+
+Images are published to:
+
+`ghcr.io/19eddie/lubelogger-telegram-bot`
+
+With these tags:
+
+- `latest`
+- `vX.Y.Z` (full release tag)
+- `X.Y.Z`
+- `X.Y`
+- `X`
+- `sha-<commit>`
+
+### First rollout checklist
+
+1. Enable branch protection for `main` and mark required checks.
+2. Merge one PR with valid Conventional Commits.
+3. Verify semantic-release generates the first tag and GitHub release.
+4. Verify GHCR image availability and expected tags.
+5. Pull and run the released image as smoke test.
+
 ### Adding a language
 
 Create a new JSON file in `bot/locales/` (e.g. `de.json`) with the same keys as `en.json`. No code changes needed.
