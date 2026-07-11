@@ -1,38 +1,11 @@
 services:
-  lubelogger:
-    image: ghcr.io/hargata/lubelogger:latest
-    container_name: lubelogger
-    ports:
-      - "8080:8080"
-    volumes:
-      - lubelogger_config:/App/config
-      - lubelogger_data:/App/data
-      - lubelogger_documents:/App/wwwroot/documents
-      - lubelogger_images:/App/wwwroot/images
-      - lubelogger_temp:/App/wwwroot/temp
-    environment:
-      - LC_ALL=en_US.UTF-8
-      - LANG=en_US.UTF-8
-
   telegram-bot:
     build: .
-    container_name: lubelogger-telegram-bot
     restart: unless-stopped
-    depends_on:
-      - lubelogger
     volumes:
-      - bot_data:/data
-    environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - LUBELOGGER_URL=http://lubelogger:8080
-      - LUBELOGGER_API_KEY=${LUBELOGGER_API_KEY}
-      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
-      - DB_PATH=/data/bot.db
+      - lubelogger_bot_data:/data
+    env_file:
+      - .env
 
 volumes:
-  lubelogger_config:
-  lubelogger_data:
-  lubelogger_documents:
-  lubelogger_images:
-  lubelogger_temp:
-  bot_data:
+  lubelogger_bot_data:

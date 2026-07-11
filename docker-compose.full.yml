@@ -1,0 +1,27 @@
+services:
+  app:
+    image: ghcr.io/hargata/lubelogger:latest
+    restart: unless-stopped
+    volumes:
+      - lubelogger_data:/App/data
+      - lubelogger_keys:/root/.aspnet/DataProtection-Keys
+    ports:
+      - 8080:8080
+
+  telegram-bot:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - lubelogger_bot_data:/data
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - LUBELOGGER_URL=http://app:8080
+      - LUBELOGGER_API_KEY=${LUBELOGGER_API_KEY}
+      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+
+volumes:
+  lubelogger_data:
+  lubelogger_keys:
+  lubelogger_bot_data:

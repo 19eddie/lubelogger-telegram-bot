@@ -1,6 +1,6 @@
 # LubeLogger Telegram Bot
 
-A Telegram bot that lets you log fuel fill-ups, service records, and odometer readings to [LubeLogger](https://github.com/hargata/lubelogger) — right from your phone. No web UI needed.
+A Telegram bot that lets you log fuel fill-ups, service records, and odometer readings to [LubeLogger](https://github.com/hargata/lubelog) — right from your phone. No web UI needed.
 
 **Why this exists:** Logging a refuel shouldn't mean opening a browser, navigating to your LubeLogger instance, and filling out a form. With this bot, you send a Telegram message and you're done. It also works great when your LubeLogger runs on a home server with no public access — the bot sits next to it on the same network, and Telegram bridges the gap from anywhere. If LubeLogger is temporarily down, records queue locally and sync later.
 
@@ -15,17 +15,17 @@ A Telegram bot that lets you log fuel fill-ups, service records, and odometer re
 4. **Create a `.env` file** (see `.env.example`):
    ```env
    TELEGRAM_BOT_TOKEN=your-token
-   LUBELOGGER_URL=http://lubelogger:8080
+   LUBELOGGER_URL=http://192.168.1.100:8080  # your LubeLogger address
    LUBELOGGER_API_KEY=your-api-key  # omit if auth is disabled
    ALLOWED_USER_IDS=123456789
    ```
 
-5. **Start everything:**
+5. **Start the bot:**
    ```bash
    docker compose up -d
    ```
 
-The bot connects to LubeLogger on the internal Docker network — no extra ports exposed.
+If LubeLogger runs in the same Docker Compose stack, use the service name as URL (e.g., `http://app:8080`). See [Docker Compose](#docker-compose) for details.
 
 ## Commands Reference
 
@@ -71,44 +71,25 @@ All data-entry commands also work without arguments — the bot will guide you t
 
 ## Docker Compose
 
-The provided `docker-compose.yml` runs the bot alongside LubeLogger:
+### Bot only (recommended)
 
-```yaml
-services:
-  lubelogger:
-    image: ghcr.io/hargata/lubelogger:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - lubelogger_config:/App/config
-      - lubelogger_data:/App/data
-      - lubelogger_documents:/App/wwwroot/documents
-      - lubelogger_images:/App/wwwroot/images
-      - lubelogger_temp:/App/wwwroot/temp
+If you already have LubeLogger running, use the main `docker-compose.yml`:
 
-  telegram-bot:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      - lubelogger
-    volumes:
-      - bot_data:/data
-    environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - LUBELOGGER_URL=http://lubelogger:8080
-      - LUBELOGGER_API_KEY=${LUBELOGGER_API_KEY}
-      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
-
-volumes:
-  lubelogger_config:
-  lubelogger_data:
-  lubelogger_documents:
-  lubelogger_images:
-  lubelogger_temp:
-  bot_data:
+```bash
+docker compose up -d
 ```
 
-The bot uses Telegram polling mode — no inbound ports required.
+Set `LUBELOGGER_URL` in your `.env` to point to your LubeLogger instance (e.g., `http://192.168.1.100:8080` or `http://lubelogger:8080` if on the same Docker network).
+
+### Full stack (bot + LubeLogger)
+
+To spin up both LubeLogger and the bot together:
+
+```bash
+docker compose -f docker-compose.full.yml up -d
+```
+
+The bot connects to LubeLogger via Docker internal DNS (`http://app:8080`) — no extra ports exposed for the bot.
 
 ## Architecture
 
