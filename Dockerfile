@@ -5,6 +5,9 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
 # Copy project files for dependency resolution
 COPY pyproject.toml uv.lock ./
 
@@ -20,8 +23,7 @@ RUN uv sync --frozen --no-dev
 # Create data directory for SQLite
 RUN mkdir -p /data
 
-# Run as non-root user for security
-RUN useradd --no-create-home --shell /bin/false botuser && chown -R botuser:botuser /data
-USER botuser
+# Activate venv via PATH — no uv needed at runtime
+ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["uv", "run", "python", "-m", "bot.main"]
+CMD ["python", "-m", "bot.main"]
