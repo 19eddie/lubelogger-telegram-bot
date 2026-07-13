@@ -15,16 +15,16 @@ if TYPE_CHECKING:
 
 
 class GasRecordPayload(BaseModel):
-    """Matches LubeLogger GasRecordExportModel — all fields as strings."""
+    """Matches LubeLogger GasRecordInput — uses input model field names."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     date: str
-    odometer: str
-    fuel_consumed: str = Field(alias="fuelConsumed")
-    cost: str
-    is_fill_to_full: str = Field(alias="isFillToFull")  # "true" / "false"
-    missed_fuel_up: str = Field(alias="missedFuelUp")  # "true" / "false"
+    odometer: int
+    fuel_consumed: float = Field(alias="fuelConsumed")
+    cost: float
+    is_fill_to_full: bool = Field(alias="isFillToFull")
+    missed_fuel_up: bool = Field(alias="missedFuelUp")
     notes: str = ""
     tags: str = ""
 
@@ -33,11 +33,11 @@ class GasRecordPayload(BaseModel):
         """Create a payload from a validated GasRecordModel."""
         return cls(
             date=record.date,
-            odometer=str(record.odometer),
-            fuel_consumed=str(record.liters),
-            cost=str(record.cost),
-            is_fill_to_full=str(record.is_fill_to_full).lower(),
-            missed_fuel_up=str(record.missed_fuel_up).lower(),
+            odometer=record.odometer,
+            fuel_consumed=record.liters,
+            cost=record.cost,
+            is_fill_to_full=record.is_fill_to_full,
+            missed_fuel_up=record.missed_fuel_up,
         )
 
 

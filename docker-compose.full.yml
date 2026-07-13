@@ -5,6 +5,9 @@ services:
     volumes:
       - lubelogger_data:/App/data
       - lubelogger_keys:/root/.aspnet/DataProtection-Keys
+    environment:
+      - LC_ALL=it_IT
+      - LANG=it_IT
     ports:
       - 8080:8080
 

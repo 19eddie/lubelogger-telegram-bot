@@ -74,11 +74,13 @@ class LubeLoggerClient:
         Returns:
             The API response indicating success.
         """
+        payload = record.model_dump(by_alias=True)
+        logger.info("Gas record payload: %s", payload)
         response = await self._request(
             "POST",
             "/api/vehicle/gasrecords/add",
             params={"vehicleId": vehicle_id},
-            json=record.model_dump(by_alias=True),
+            json=payload,
         )
         return ApiResponse.model_validate(response.json())
 
@@ -98,7 +100,7 @@ class LubeLoggerClient:
             "POST",
             "/api/vehicle/servicerecords/add",
             params={"vehicleId": vehicle_id},
-            json=record.model_dump(by_alias=True),
+            json=record.model_dump(by_alias=True, exclude_defaults=True),
         )
         return ApiResponse.model_validate(response.json())
 
