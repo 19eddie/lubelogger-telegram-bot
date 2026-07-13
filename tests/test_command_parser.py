@@ -77,9 +77,7 @@ class TestParseService:
 
     def test_comma_decimal_cost(self) -> None:
         result = CommandParser.parse_service('50000 "Tire rotation" 30,00')
-        assert result == ServiceInput(
-            odometer="50000", description="Tire rotation", cost="30.00"
-        )
+        assert result == ServiceInput(odometer="50000", description="Tire rotation", cost="30.00")
 
     def test_empty_string(self) -> None:
         with pytest.raises(ParseError) as exc_info:

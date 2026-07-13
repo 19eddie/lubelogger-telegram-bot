@@ -8,6 +8,7 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes, fil
 from bot.exceptions import LubeLoggerUnreachableError
 from bot.i18n import get_text
 from bot.services.config_store import ConfigStore
+from bot.services.keyboard import main_menu_keyboard
 from bot.services.lubelogger_client import LubeLoggerClient
 
 
@@ -29,8 +30,7 @@ async def vehicle_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     keyboard = [
-        [InlineKeyboardButton(v.display_name, callback_data=f"vehicle:{v.id}")]
-        for v in vehicles
+        [InlineKeyboardButton(v.display_name, callback_data=f"vehicle:{v.id}")] for v in vehicles
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(get_text("vehicle_prompt", lang), reply_markup=reply_markup)
@@ -68,6 +68,12 @@ async def vehicle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     await config_store.set_active_vehicle(user_id, vehicle_id)
     await query.edit_message_text(get_text("vehicle_selected", lang, vehicle_name=vehicle_name))
+    # Send a follow-up message with the main Reply keyboard so it stays visible
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=get_text("start_welcome_back", lang, vehicle=vehicle_name),
+        reply_markup=main_menu_keyboard(lang),
+    )
 
 
 def get_vehicle_handlers(

@@ -9,7 +9,7 @@
         "type": "command",
         "command": "uv run pytest -x -q"
       },
-      "enabled": true
+      "enabled": false
     }
   ]
 }

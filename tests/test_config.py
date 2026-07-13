@@ -68,9 +68,12 @@ class TestLoadConfig:
     """load_config() wraps BotConfig with ConfigurationError."""
 
     def test_raises_configuration_error_on_missing_vars(self) -> None:
-        with patch.dict(os.environ, {}, clear=True), patch(
-            "bot.config.BotConfig.model_config",
-            {**BotConfig.model_config, "env_file": None},
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch(
+                "bot.config.BotConfig.model_config",
+                {**BotConfig.model_config, "env_file": None},
+            ),
         ):
             with pytest.raises(ConfigurationError):
                 load_config()

@@ -80,18 +80,14 @@ class TestConnectionErrors:
 
     async def test_connect_error_raises_unreachable(self, client: LubeLoggerClient) -> None:
         """ConnectError should be wrapped in LubeLoggerUnreachableError."""
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.ConnectError("Connection refused")
             with pytest.raises(LubeLoggerUnreachableError):
                 await client.get_vehicles()
 
     async def test_timeout_error_raises_unreachable(self, client: LubeLoggerClient) -> None:
         """TimeoutException should be wrapped in LubeLoggerUnreachableError."""
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.TimeoutException("Request timed out")
             with pytest.raises(LubeLoggerUnreachableError):
                 await client.get_vehicles()
@@ -107,9 +103,7 @@ class TestApiErrors:
             text="Internal Server Error",
             request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             with pytest.raises(LubeLoggerApiError) as exc_info:
                 await client.get_vehicles()
@@ -122,9 +116,7 @@ class TestApiErrors:
             text="Not Found",
             request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             with pytest.raises(LubeLoggerApiError) as exc_info:
                 await client.get_vehicles()
@@ -136,9 +128,7 @@ class TestApiKeyNonLeakage:
 
     async def test_api_key_not_in_unreachable_error(self, client: LubeLoggerClient) -> None:
         """API key must not appear in LubeLoggerUnreachableError message."""
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.ConnectError("Connection refused")
             with pytest.raises(LubeLoggerUnreachableError) as exc_info:
                 await client.get_vehicles()
@@ -151,9 +141,7 @@ class TestApiKeyNonLeakage:
             text="Unauthorized",
             request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             with pytest.raises(LubeLoggerApiError) as exc_info:
                 await client.get_vehicles()
@@ -170,13 +158,9 @@ class TestAddGasRecord:
         mock_response = httpx.Response(
             status_code=200,
             json={"success": True, "message": "Gas Record Added"},
-            request=httpx.Request(
-                "POST", "http://localhost:8080/api/vehicle/gasrecords/add"
-            ),
+            request=httpx.Request("POST", "http://localhost:8080/api/vehicle/gasrecords/add"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             result = await client.add_gas_record(1, gas_payload)
             assert result.success is True
@@ -198,13 +182,9 @@ class TestAddServiceRecord:
         mock_response = httpx.Response(
             status_code=200,
             json={"success": True, "message": "Service Record Added"},
-            request=httpx.Request(
-                "POST", "http://localhost:8080/api/vehicle/servicerecords/add"
-            ),
+            request=httpx.Request("POST", "http://localhost:8080/api/vehicle/servicerecords/add"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             result = await client.add_service_record(1, service_payload)
             assert result.success is True
@@ -223,13 +203,9 @@ class TestAddOdometerRecord:
         mock_response = httpx.Response(
             status_code=200,
             json={"success": True, "message": "Odometer Record Added"},
-            request=httpx.Request(
-                "POST", "http://localhost:8080/api/vehicle/odometerrecords/add"
-            ),
+            request=httpx.Request("POST", "http://localhost:8080/api/vehicle/odometerrecords/add"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             result = await client.add_odometer_record(1, odometer_payload)
             assert result.success is True
@@ -247,19 +223,23 @@ class TestGetVehicles:
             status_code=200,
             json=[
                 {
-                    "id": 1, "year": 2020, "make": "Toyota",
-                    "model": "Yaris", "licensePlate": "AB123",
+                    "id": 1,
+                    "year": 2020,
+                    "make": "Toyota",
+                    "model": "Yaris",
+                    "licensePlate": "AB123",
                 },
                 {
-                    "id": 2, "year": 2018, "make": "Fiat",
-                    "model": "Punto", "licensePlate": "CD456",
+                    "id": 2,
+                    "year": 2018,
+                    "make": "Fiat",
+                    "model": "Punto",
+                    "licensePlate": "CD456",
                 },
             ],
             request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             vehicles = await client.get_vehicles()
             assert len(vehicles) == 2
@@ -275,9 +255,7 @@ class TestGetVehicles:
             json=[],
             request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             vehicles = await client.get_vehicles()
             assert vehicles == []
@@ -294,13 +272,9 @@ class TestGetLatestOdometer:
                 {"date": "2024-01-10", "odometer": "44000"},
                 {"date": "2024-01-15", "odometer": "45000"},
             ],
-            request=httpx.Request(
-                "GET", "http://localhost:8080/api/vehicle/odometerrecords"
-            ),
+            request=httpx.Request("GET", "http://localhost:8080/api/vehicle/odometerrecords"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             result = await client.get_latest_odometer(1)
             assert result == {"date": "2024-01-15", "odometer": "45000"}
@@ -312,13 +286,9 @@ class TestGetLatestOdometer:
         mock_response = httpx.Response(
             status_code=200,
             json=[],
-            request=httpx.Request(
-                "GET", "http://localhost:8080/api/vehicle/odometerrecords"
-            ),
+            request=httpx.Request("GET", "http://localhost:8080/api/vehicle/odometerrecords"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             result = await client.get_latest_odometer(1)
             assert result is None
@@ -335,13 +305,9 @@ class TestGetLatestGasRecord:
                 {"date": "2024-01-10", "odometer": "44000", "fuelConsumed": "40"},
                 {"date": "2024-01-15", "odometer": "45000", "fuelConsumed": "42.5"},
             ],
-            request=httpx.Request(
-                "GET", "http://localhost:8080/api/vehicle/gasrecords"
-            ),
+            request=httpx.Request("GET", "http://localhost:8080/api/vehicle/gasrecords"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             result = await client.get_latest_gas_record(1)
             assert result == {"date": "2024-01-15", "odometer": "45000", "fuelConsumed": "42.5"}
@@ -353,13 +319,9 @@ class TestGetLatestGasRecord:
         mock_response = httpx.Response(
             status_code=200,
             json=[],
-            request=httpx.Request(
-                "GET", "http://localhost:8080/api/vehicle/gasrecords"
-            ),
+            request=httpx.Request("GET", "http://localhost:8080/api/vehicle/gasrecords"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             result = await client.get_latest_gas_record(1)
             assert result is None
@@ -375,9 +337,7 @@ class TestHealthCheck:
             json=[],
             request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             assert await client.health_check() is True
 
@@ -385,23 +345,17 @@ class TestHealthCheck:
         self, client: LubeLoggerClient
     ) -> None:
         """health_check returns False when API is unreachable."""
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.side_effect = httpx.ConnectError("Connection refused")
             assert await client.health_check() is False
 
-    async def test_health_check_returns_false_on_api_error(
-        self, client: LubeLoggerClient
-    ) -> None:
+    async def test_health_check_returns_false_on_api_error(self, client: LubeLoggerClient) -> None:
         """health_check returns False when API returns error."""
         mock_response = httpx.Response(
             status_code=500,
             text="Internal Server Error",
             request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
         )
-        with patch.object(
-            client._client, "request", new_callable=AsyncMock
-        ) as mock_request:
+        with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = mock_response
             assert await client.health_check() is False

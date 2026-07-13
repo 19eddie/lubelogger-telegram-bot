@@ -44,9 +44,7 @@ class QueueService:
         self._db_path = db_path
         self.max_retries = max_retries
 
-    async def enqueue(
-        self, user_id: int, vehicle_id: int, record_type: str, payload: str
-    ) -> int:
+    async def enqueue(self, user_id: int, vehicle_id: int, record_type: str, payload: str) -> int:
         """Add a record to the offline queue.
 
         Args:
@@ -185,9 +183,7 @@ class QueueService:
                 logger.warning("LubeLogger unreachable during flush, stopping")
                 break
             except LubeLoggerApiError as exc:
-                logger.warning(
-                    "API error for queue item %d: %s", item.id, exc.message
-                )
+                logger.warning("API error for queue item %d: %s", item.id, exc.message)
                 new_count = await self.increment_retry(item.id)
                 if new_count >= self.max_retries:
                     await self.mark_failed(item.id)

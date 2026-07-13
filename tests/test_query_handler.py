@@ -64,9 +64,7 @@ class TestLastCommand:
     async def test_last_fuel_empty(self) -> None:
         """'/last fuel' with no records shows empty message."""
         update, context = _make_update_and_context(args=["fuel"])
-        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(
-            return_value=None
-        )
+        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(return_value=None)
 
         await last_command(update, context)
 
@@ -92,9 +90,7 @@ class TestLastCommand:
     async def test_last_km_empty(self) -> None:
         """'/last km' with no records shows empty message."""
         update, context = _make_update_and_context(args=["km"])
-        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
-            return_value=None
-        )
+        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(return_value=None)
 
         await last_command(update, context)
 
@@ -102,13 +98,13 @@ class TestLastCommand:
         assert "No odometer records found" in msg
 
     async def test_last_no_args_shows_usage(self) -> None:
-        """'/last' without subcommand shows usage hint."""
+        """'/last' without subcommand shows history prompt with inline keyboard."""
         update, context = _make_update_and_context(args=[])
 
         await last_command(update, context)
 
         msg = update.message.reply_text.call_args[0][0]
-        assert "/last fuel" in msg or "Usage" in msg
+        assert "What would you like to see?" in msg
 
     async def test_last_invalid_subcommand_shows_usage(self) -> None:
         """'/last xyz' with invalid subcommand shows usage hint."""

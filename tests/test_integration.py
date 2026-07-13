@@ -223,6 +223,8 @@ class TestVehicleSelectionFlow:
             "config_store": config_store,
             "lubelogger_client": lubelogger_client,
         }
+        context.bot.send_message = AsyncMock()
+        update.effective_chat.id = 456
 
         await vehicle_callback(update, context)
 
@@ -234,6 +236,9 @@ class TestVehicleSelectionFlow:
         update.callback_query.edit_message_text.assert_called_once()
         msg = update.callback_query.edit_message_text.call_args[0][0]
         assert "Toyota" in msg or "Vehicle" in msg or "vehicle" in msg
+
+        # Verify follow-up message with main keyboard was sent
+        context.bot.send_message.assert_called_once()
 
 
 class TestUnauthorizedUser:

@@ -5,23 +5,75 @@ from __future__ import annotations
 import logging
 import sys
 
-from telegram.ext import Application, CommandHandler
+from telegram import Update
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
+from bot.commands import register_commands
 from bot.config import load_config
 from bot.exceptions import ConfigurationError
 from bot.handlers.fuel import get_fuel_conversation_handler
 from bot.handlers.odometer import get_odometer_conversation_handler
-from bot.handlers.query import last_command, queue_command, status_command
+from bot.handlers.query import (
+    get_query_callback_handler,
+    last_command,
+    queue_command,
+    status_command,
+)
 from bot.handlers.service import get_service_conversation_handler
 from bot.handlers.settings import get_settings_handlers
 from bot.handlers.vehicle import get_vehicle_handlers
+from bot.i18n import get_text
 from bot.middleware.auth import create_auth_filter
 from bot.services.config_store import ConfigStore
 from bot.services.database import init_db
+from bot.services.keyboard import main_menu_keyboard
 from bot.services.lubelogger_client import LubeLoggerClient
 from bot.services.queue_service import QueueService
 
 logger = logging.getLogger(__name__)
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /help — show available commands."""
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+
+    await update.message.reply_text(
+        get_text("help_text", lang),
+        reply_markup=main_menu_keyboard(lang),
+    )
+
+
+async def unknown_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Catch-all for unrecognized messages."""
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+
+    await update.message.reply_text(
+        get_text("unknown_message", lang),
+        reply_markup=main_menu_keyboard(lang),
+    )
+
+
+async def expired_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle stale inline button presses after conversation timeout."""
+    query = update.callback_query
+    await query.answer()
+
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+
+    await query.edit_message_text(get_text("session_expired", lang))
 
 
 async def retry_queue_job(context: object) -> None:
@@ -88,6 +140,9 @@ def main() -> None:
                 first=config.queue_retry_interval,
             )
 
+        # Register bot commands with BotFather
+        await register_commands(application)
+
     app.post_init = post_init
 
     # Register handlers — all with auth filter
@@ -103,15 +158,36 @@ def main() -> None:
     app.add_handler(vehicle_cb)
 
     # Settings handlers
-    start_handler, lang_handler, lang_cb = get_settings_handlers(auth_filter=auth)
+    start_handler, lang_handler, lang_cb, start_vehicle_cb = get_settings_handlers(auth_filter=auth)
     app.add_handler(start_handler)
     app.add_handler(lang_handler)
     app.add_handler(lang_cb)
+    app.add_handler(start_vehicle_cb)
+
+    # History keyboard button — not a conversation, just calls last_command
+    app.add_handler(MessageHandler(filters.Regex(r"^📊") & auth, last_command))
+
+    # Inline keyboard callback for last record type selection
+    app.add_handler(get_query_callback_handler(auth_filter=auth))
 
     # Query handlers
     app.add_handler(CommandHandler("last", last_command, filters=auth))
     app.add_handler(CommandHandler("status", status_command, filters=auth))
     app.add_handler(CommandHandler("queue", queue_command, filters=auth))
+
+    # Fallback for stale confirmation buttons (expired conversations)
+    app.add_handler(
+        CallbackQueryHandler(
+            expired_callback_handler,
+            pattern=r"^(confirm_log_another|confirm_history|summary_save|summary_edit|summary_cancel|fuel_full_tank)",
+        )
+    )
+
+    # Help command
+    app.add_handler(CommandHandler("help", help_command, filters=auth))
+
+    # Catch-all for unrecognized text messages — must be last
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & auth, unknown_message_handler))
 
     # Start polling
     app.run_polling()

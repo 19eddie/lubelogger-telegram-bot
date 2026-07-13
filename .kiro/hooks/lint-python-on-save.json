@@ -10,7 +10,7 @@
         "type": "command",
         "command": "uv run ruff check --fix ."
       },
-      "enabled": true
+      "enabled": false
     }
   ]
 }

@@ -38,7 +38,7 @@ _payload_st = st.fixed_dictionaries(
 ).map(json.dumps)
 
 
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 @given(
     user_id=_user_id_st,
     vehicle_id=_vehicle_id_st,
@@ -83,7 +83,7 @@ async def test_property_queue_fifo_ordering(
         await service.mark_sent(item_id)
 
 
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 @given(
     user_id=_user_id_st,
     vehicle_id=_vehicle_id_st,

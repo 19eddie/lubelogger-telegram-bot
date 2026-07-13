@@ -31,7 +31,7 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 
 | Command | Description |
 |---------|-------------|
-| `/start` | Welcome message, prompts vehicle selection |
+| `/start` | New users: welcome + vehicle selection. Returning users: welcome-back + persistent keyboard |
 | `/vehicle` | Select active vehicle via inline keyboard |
 | `/fuel <odo> <liters> <cost>` | Log a fuel fill-up |
 | `/service <odo> "<desc>" <cost>` | Log a maintenance record |
@@ -54,7 +54,29 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 /status
 ```
 
-All data-entry commands also work without arguments — the bot will guide you through a step-by-step conversation.
+All data-entry commands also work without arguments — the bot will guide you through a step-by-step conversation with:
+
+- **Persistent bottom keyboard** (⛽ Fuel / 🔧 Service / 📊 History) for quick access
+- **Progress indicators** showing your position in the flow (Step 1/4, Step 2/4...)
+- **In-place message editing** — the bot updates the same message instead of flooding the chat
+- **Summary review** before saving, with Save / Edit / Cancel inline buttons
+- **Rich confirmation** after saving — shows all field values and fuel consumption (L/100km)
+- **"Log another" button** for quick restart without retyping the command
+- **Single-vehicle auto-selection** — skips the vehicle prompt when only one vehicle exists
+
+## UX Features
+
+The bot is designed to feel like a native mobile app rather than a typical chat bot:
+
+| Feature | Description |
+|---------|-------------|
+| Persistent keyboard | Always-visible ⛽ / 🔧 / 📊 buttons — no need to remember commands |
+| Guided conversations | Step-by-step prompts with progress indicators (📍 Step 2/4) |
+| In-place editing | Bot edits its own message at each step, keeping the chat clean |
+| Summary & confirm | Review all values before saving; edit or cancel if something's wrong |
+| Fuel consumption | Automatic L/100km calculation shown in the confirmation message |
+| Quick restart | "Log another" inline button after saving to start a new entry immediately |
+| Smart defaults | Auto-selects your vehicle when only one exists; remembers language preference |
 
 ## Configuration
 
@@ -96,6 +118,7 @@ The bot connects to LubeLogger via Docker internal DNS (`http://app:8080`) — n
 ```
 bot/
 ├── main.py              # Entry point: config → DB init → handlers → polling
+├── commands.py          # BotFather command registration at startup
 ├── config.py            # pydantic-settings config from env vars
 ├── exceptions.py        # Custom exception hierarchy
 ├── i18n.py              # Locale loader (JSON files, English fallback)
@@ -110,7 +133,11 @@ bot/
 │   ├── lubelogger_client.py   # httpx async client (x-api-key auth)
 │   ├── queue_service.py       # Offline queue with SQLite persistence
 │   ├── config_store.py        # Per-user preferences (vehicle, language)
-│   └── command_parser.py      # Argument parsing & decimal normalization
+│   ├── command_parser.py      # Argument parsing & decimal normalization
+│   ├── keyboard.py            # Reply/inline keyboard builders
+│   ├── conversation.py        # Progress indicators, in-place editing, summary helpers
+│   ├── metrics.py             # Fuel consumption computation (L/100km)
+│   └── database.py            # SQLite init/connection helpers
 ├── models/              # Pydantic models for validation & serialization
 │   ├── inputs.py
 │   ├── validators.py

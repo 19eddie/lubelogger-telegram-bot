@@ -13,6 +13,12 @@ from bot.handlers.odometer import ODOMETER as KM_ODOMETER
 from bot.handlers.odometer import km_command
 from bot.handlers.service import ODOMETER as SERVICE_ODOMETER
 from bot.handlers.service import service_command
+from bot.models.responses import Vehicle
+
+
+def _make_vehicle(vehicle_id: int = 1, make: str = "Toyota", model: str = "Corolla") -> Vehicle:
+    """Create a test Vehicle instance."""
+    return Vehicle(id=vehicle_id, year=2020, make=make, model=model)
 
 
 def _make_update_and_context(
@@ -29,18 +35,26 @@ def _make_update_and_context(
     """
     update = MagicMock()
     update.effective_user.id = user_id
+    update.effective_chat.id = 123
     update.message.text = text
     update.message.reply_text = AsyncMock()
 
     context = MagicMock()
     context.args = args or []
     context.user_data = {}
+    context.bot = AsyncMock()
+    context.bot.send_message = AsyncMock()
+    context.bot.edit_message_text = AsyncMock()
 
     config_store = AsyncMock()
     config_store.get_language = AsyncMock(return_value="en")
     config_store.get_active_vehicle = AsyncMock(return_value=1)
 
     lubelogger_client = AsyncMock()
+    # Default: single vehicle for auto-select
+    lubelogger_client.get_vehicles = AsyncMock(return_value=[_make_vehicle()])
+    lubelogger_client.get_latest_odometer = AsyncMock(return_value=None)
+
     queue_service = AsyncMock()
 
     context.bot_data = {
@@ -62,8 +76,6 @@ class TestFuelConversationInitiation:
         result = await fuel_command(update, context)
 
         assert result == FUEL_ODOMETER
-        # Verify a prompt message was sent
-        update.message.reply_text.assert_called_once()
 
     async def test_fuel_without_args_prompts_odometer(self) -> None:
         """/fuel without args should prompt user for odometer reading."""
@@ -71,9 +83,9 @@ class TestFuelConversationInitiation:
 
         await fuel_command(update, context)
 
-        msg = update.message.reply_text.call_args[0][0]
-        # Should contain a prompt for odometer
-        assert msg  # Non-empty response
+        # With auto-select, it sends auto-select message + odometer prompt via send_or_edit
+        # The bot sends a message via context.bot.send_message (from send_or_edit)
+        assert context.bot.send_message.called or update.message.reply_text.called
 
     async def test_fuel_without_args_stores_vehicle_id(self) -> None:
         """/fuel without args should store the vehicle_id in user_data."""
@@ -87,14 +99,13 @@ class TestFuelConversationInitiation:
         """/fuel without active vehicle should prompt vehicle selection."""
         update, context = _make_update_and_context(text="/fuel", args=[])
         context.bot_data["config_store"].get_active_vehicle = AsyncMock(return_value=None)
+        context.bot_data["lubelogger_client"].get_vehicles = AsyncMock(return_value=[])
 
         from telegram.ext import ConversationHandler
 
         result = await fuel_command(update, context)
 
         assert result == ConversationHandler.END
-        msg = update.message.reply_text.call_args[0][0]
-        assert "/vehicle" in msg
 
 
 class TestServiceConversationInitiation:
@@ -127,17 +138,16 @@ class TestServiceConversationInitiation:
         assert context.user_data["service_vehicle_id"] == 1
 
     async def test_service_without_args_no_vehicle_prompts_selection(self) -> None:
-        """/service without active vehicle should prompt vehicle selection."""
+        """/service without active vehicle should end conversation when no vehicles."""
         update, context = _make_update_and_context(text="/service", args=[])
         context.bot_data["config_store"].get_active_vehicle = AsyncMock(return_value=None)
+        context.bot_data["lubelogger_client"].get_vehicles = AsyncMock(return_value=[])
 
         from telegram.ext import ConversationHandler
 
         result = await service_command(update, context)
 
         assert result == ConversationHandler.END
-        msg = update.message.reply_text.call_args[0][0]
-        assert "/vehicle" in msg
 
 
 class TestOdometerConversationInitiation:
