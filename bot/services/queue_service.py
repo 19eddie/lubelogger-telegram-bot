@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -25,11 +25,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FlushResult:
-    """Result of a queue flush operation."""
+    """Result of a queue flush operation.
+
+    The ``sent_items`` and ``failed_items`` lists carry the queue items whose
+    status changed during this flush, so callers can notify the submitting user.
+    """
 
     sent: int
     failed: int
     remaining: int
+    sent_items: list[QueueItem] = field(default_factory=list)
+    failed_items: list[QueueItem] = field(default_factory=list)
 
 
 class QueueService:
@@ -172,15 +178,17 @@ class QueueService:
             client: The LubeLogger HTTP client to use for sending.
 
         Returns:
-            A FlushResult with counts of sent, failed, and remaining items.
+            A FlushResult with counts of sent, failed, and remaining items, plus
+            the items that were sent or permanently failed during this flush.
         """
         pending = await self.get_pending()
-        sent, failed = 0, 0
+        sent_items: list[QueueItem] = []
+        failed_items: list[QueueItem] = []
         for item in pending:
             try:
                 await self._send_item(client, item)
                 await self.mark_sent(item.id)
-                sent += 1
+                sent_items.append(item)
             except LubeLoggerUnreachableError:
                 logger.warning("LubeLogger unreachable during flush, stopping")
                 break
@@ -191,8 +199,15 @@ class QueueService:
                 new_count = await self.increment_retry(item.id)
                 if new_count >= self.max_retries:
                     await self.mark_failed(item.id)
-                    failed += 1
-        return FlushResult(sent=sent, failed=failed, remaining=len(pending) - sent - failed)
+                    failed_items.append(item)
+        sent, failed = len(sent_items), len(failed_items)
+        return FlushResult(
+            sent=sent,
+            failed=failed,
+            remaining=len(pending) - sent - failed,
+            sent_items=sent_items,
+            failed_items=failed_items,
+        )
 
     async def _send_item(self, client: LubeLoggerClient, item: QueueItem) -> None:
         """Reconstruct the payload and send it via the appropriate client method.
