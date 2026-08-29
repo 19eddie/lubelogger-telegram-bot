@@ -50,7 +50,7 @@ class LubeLoggerClient:
         """
         try:
             response = await self._client.request(method, path, params=params, json=json)
-        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+        except httpx.RequestError as exc:
             logger.error("LubeLogger unreachable: %s", type(exc).__name__)
             raise LubeLoggerUnreachableError("Unable to connect to LubeLogger") from exc
 

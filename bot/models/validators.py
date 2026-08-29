@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class GasRecordModel(BaseModel):
     """Validates fuel record input."""
 
-    model_config = ConfigDict(strict=False)
+    model_config = ConfigDict(strict=False, allow_inf_nan=False)
 
     date: str = Field(default_factory=lambda: date.today().isoformat())
     odometer: int = Field(gt=0)
@@ -23,7 +23,7 @@ class GasRecordModel(BaseModel):
 class ServiceRecordModel(BaseModel):
     """Validates service record input."""
 
-    model_config = ConfigDict(strict=False)
+    model_config = ConfigDict(strict=False, allow_inf_nan=False)
 
     date: str = Field(default_factory=lambda: date.today().isoformat())
     odometer: int = Field(gt=0)
@@ -42,7 +42,7 @@ class ServiceRecordModel(BaseModel):
 class OdometerRecordModel(BaseModel):
     """Validates odometer record input."""
 
-    model_config = ConfigDict(strict=False)
+    model_config = ConfigDict(strict=False, allow_inf_nan=False)
 
     date: str = Field(default_factory=lambda: date.today().isoformat())
     odometer: int = Field(gt=0)
