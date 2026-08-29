@@ -89,7 +89,7 @@ To spin up both LubeLogger and the bot together:
 docker compose -f docker-compose.full.yml up -d
 ```
 
-The bot connects to LubeLogger via Docker internal DNS (`http://app:8080`) — no extra ports exposed for the bot.
+The full-stack Compose file loads bot configuration from `.env`. It overrides only `LUBELOGGER_URL` inside the bot to `http://app:8080`, because `app` is the LubeLogger service name — no extra ports are exposed for the bot.
 
 ## Architecture
 
