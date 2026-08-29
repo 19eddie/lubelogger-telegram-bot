@@ -1,10 +1,10 @@
-"""Tests for the settings handler: /start and /lang commands."""
+"""Tests for the settings handler: /lang command."""
 
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-from bot.handlers.settings import SUPPORTED_LANGUAGES, lang_callback, lang_command, start_command
+from bot.handlers.settings import SUPPORTED_LANGUAGES, lang_callback, lang_command
 
 
 def _make_update_and_context(
@@ -20,11 +20,11 @@ def _make_update_and_context(
     # Set up bot_data with mock services
     config_store = AsyncMock()
     config_store.get_language = AsyncMock(return_value="en")
-    config_store.get_active_vehicle = AsyncMock(return_value=1)
 
     context.bot_data = {
         "config_store": config_store,
     }
+    context.bot = AsyncMock()
 
     return update, context
 
@@ -49,43 +49,9 @@ def _make_callback_update_and_context(
     context.bot_data = {
         "config_store": config_store,
     }
+    context.bot = AsyncMock()
 
     return update, context
-
-
-class TestStartCommand:
-    """Tests for the /start command handler."""
-
-    async def test_start_with_active_vehicle_shows_welcome(self) -> None:
-        """/start with an active vehicle shows the welcome message."""
-        update, context = _make_update_and_context()
-        context.bot_data["config_store"].get_active_vehicle = AsyncMock(return_value=1)
-
-        await start_command(update, context)
-
-        msg = update.message.reply_text.call_args[0][0]
-        assert "Welcome" in msg or "Benvenuto" in msg
-
-    async def test_start_without_vehicle_prompts_selection(self) -> None:
-        """/start without an active vehicle prompts vehicle selection."""
-        update, context = _make_update_and_context()
-        context.bot_data["config_store"].get_active_vehicle = AsyncMock(return_value=None)
-
-        await start_command(update, context)
-
-        msg = update.message.reply_text.call_args[0][0]
-        assert "/vehicle" in msg
-
-    async def test_start_uses_user_language(self) -> None:
-        """/start respects the user's language preference."""
-        update, context = _make_update_and_context()
-        context.bot_data["config_store"].get_language = AsyncMock(return_value="it")
-        context.bot_data["config_store"].get_active_vehicle = AsyncMock(return_value=None)
-
-        await start_command(update, context)
-
-        msg = update.message.reply_text.call_args[0][0]
-        assert "Benvenuto" in msg or "/vehicle" in msg
 
 
 class TestLangCommand:

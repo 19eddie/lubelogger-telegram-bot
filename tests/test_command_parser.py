@@ -6,7 +6,36 @@ import pytest
 
 from bot.exceptions import ParseError
 from bot.models.inputs import FuelInput, OdometerInput, ServiceInput
-from bot.services.command_parser import CommandParser
+from bot.services.command_parser import CommandParser, parse_vehicle_override
+
+
+class TestParseVehicleOverride:
+    """Tests for the unified parse_vehicle_override function."""
+
+    def test_extracts_vehicle_id(self) -> None:
+        vehicle_id, remaining = parse_vehicle_override("--vehicle 5 45000 42.5 78.90")
+        assert vehicle_id == 5
+        assert remaining == "45000 42.5 78.90"
+
+    def test_no_override_returns_none(self) -> None:
+        vehicle_id, remaining = parse_vehicle_override("45000 42.5 78.90")
+        assert vehicle_id is None
+        assert remaining == "45000 42.5 78.90"
+
+    def test_override_at_end(self) -> None:
+        vehicle_id, remaining = parse_vehicle_override("45000 --vehicle 3")
+        assert vehicle_id == 3
+        assert remaining == "45000"
+
+    def test_empty_string(self) -> None:
+        vehicle_id, remaining = parse_vehicle_override("")
+        assert vehicle_id is None
+        assert remaining == ""
+
+    def test_only_override(self) -> None:
+        vehicle_id, remaining = parse_vehicle_override("--vehicle 10")
+        assert vehicle_id == 10
+        assert remaining == ""
 
 
 class TestNormalizeDecimal:

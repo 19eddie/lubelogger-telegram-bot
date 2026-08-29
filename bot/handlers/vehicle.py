@@ -19,18 +19,27 @@ async def vehicle_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     lang = await config_store.get_language(user_id)
 
     try:
-        vehicles = await client.get_vehicles()
+        snapshots = await client.get_vehicle_snapshots()
     except LubeLoggerUnreachableError:
         await update.message.reply_text(get_text("lubelogger_unreachable", lang))
         return
 
-    if not vehicles:
+    if not snapshots:
         await update.message.reply_text(get_text("no_vehicles", lang))
         return
 
+    # Build id-to-name mapping and store it for the callback to resolve later.
+    vehicle_map: dict[int, str] = {
+        s.vehicle.id: s.vehicle.display_name for s in snapshots
+    }
+    context.user_data["_vehicle_map"] = vehicle_map
+
     keyboard = [
-        [InlineKeyboardButton(v.display_name, callback_data=f"vehicle:{v.id}")]
-        for v in vehicles
+        [InlineKeyboardButton(
+            name.strip() or get_text("vehicle_fallback_name", lang),
+            callback_data=f"vehicle:{vid}",
+        )]
+        for vid, name in vehicle_map.items()
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(get_text("vehicle_prompt", lang), reply_markup=reply_markup)
@@ -55,18 +64,14 @@ async def vehicle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     vehicle_id = int(query.data.split(":")[1])
 
-    # Get vehicle name for confirmation message
-    client: LubeLoggerClient = context.bot_data["lubelogger_client"]
-    try:
-        vehicles = await client.get_vehicles()
-        vehicle_name = next(
-            (v.display_name for v in vehicles if v.id == vehicle_id),
-            f"Vehicle #{vehicle_id}",
-        )
-    except LubeLoggerUnreachableError:
-        vehicle_name = f"Vehicle #{vehicle_id}"
+    # Resolve vehicle name from the stored mapping — never issue a second API call.
+    vehicle_map: dict[int, str] = context.user_data.get("_vehicle_map", {})
+    vehicle_name = vehicle_map.get(vehicle_id) or get_text("vehicle_fallback_name", lang)
 
-    await config_store.set_active_vehicle(user_id, vehicle_id)
+    # Clean up the transient mapping.
+    context.user_data.pop("_vehicle_map", None)
+
+    await config_store.set_active_vehicle(user_id, vehicle_id, vehicle_name)
     await query.edit_message_text(get_text("vehicle_selected", lang, vehicle_name=vehicle_name))
 
 

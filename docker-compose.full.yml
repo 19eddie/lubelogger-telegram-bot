@@ -15,11 +15,10 @@ services:
       - app
     volumes:
       - lubelogger_bot_data:/data
+    env_file:
+      - .env
     environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - LUBELOGGER_URL=http://app:8080
-      - LUBELOGGER_API_KEY=${LUBELOGGER_API_KEY}
-      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
 
 volumes:
   lubelogger_data:

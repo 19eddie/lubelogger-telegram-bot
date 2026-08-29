@@ -28,10 +28,14 @@ class Vehicle(BaseModel):
 
     @property
     def display_name(self) -> str:
-        """Human-readable vehicle name, falling back to ID if no details available."""
+        """Human-readable vehicle name, empty when no name can be built.
+
+        The fallback lives in the caller, not here: only the caller knows the
+        user's language and can substitute `vehicle_fallback_name`
+        (Requirement 13.6).
+        """
         parts = [str(self.year) if self.year else "", self.make, self.model]
-        name = " ".join(p for p in parts if p).strip()
-        return name or f"Vehicle #{self.id}"
+        return " ".join(p for p in parts if p).strip()
 
 
 class QueueItem(BaseModel):

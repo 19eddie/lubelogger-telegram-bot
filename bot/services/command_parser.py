@@ -7,6 +7,22 @@ import re
 from bot.exceptions import ParseError
 from bot.models.inputs import FuelInput, OdometerInput, ServiceInput
 
+_VEHICLE_OVERRIDE_RE = re.compile(r"--vehicle\s+(\d+)")
+
+
+def parse_vehicle_override(args_text: str) -> tuple[int | None, str]:
+    """Extract ``--vehicle <id>`` from an argument string.
+
+    Returns:
+        A tuple of (vehicle_id or None, remaining text with the flag removed).
+    """
+    match = _VEHICLE_OVERRIDE_RE.search(args_text)
+    if match:
+        vehicle_id = int(match.group(1))
+        remaining = _VEHICLE_OVERRIDE_RE.sub("", args_text).strip()
+        return vehicle_id, remaining
+    return None, args_text
+
 
 class CommandParser:
     """Parses command arguments into typed input objects."""

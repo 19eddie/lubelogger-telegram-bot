@@ -5,25 +5,34 @@ from __future__ import annotations
 import logging
 import sys
 
-from telegram import Bot
+from telegram import Bot, Update
 from telegram.error import TelegramError
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 
+from bot.callbacks import CallbackAction
 from bot.config import load_config
 from bot.exceptions import ConfigurationError
-from bot.handlers.fuel import get_fuel_conversation_handler
-from bot.handlers.odometer import get_odometer_conversation_handler
+from bot.handlers.latest import handle_latest_callback
+from bot.handlers.menu import get_menu_handlers
+from bot.handlers.options import (
+    handle_language_selection,
+    handle_options_callback,
+    handle_vehicle_selection,
+)
 from bot.handlers.query import last_command, queue_command, status_command
-from bot.handlers.service import get_service_conversation_handler
+from bot.handlers.record_flow import get_record_conversation_handler
 from bot.handlers.settings import get_settings_handlers
 from bot.handlers.vehicle import get_vehicle_handlers
 from bot.i18n import get_text
 from bot.middleware.auth import create_auth_filter
 from bot.models.responses import QueueItem
+from bot.services.card_service import CardService
 from bot.services.config_store import ConfigStore
 from bot.services.database import init_db
 from bot.services.lubelogger_client import LubeLoggerClient
+from bot.services.odometer_tracker import OdometerTracker
 from bot.services.queue_service import QueueService
+from bot.services.record_submitter import RecordSubmitter
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +93,33 @@ async def retry_queue_job(context: object) -> None:
         )
 
 
+async def error_handler(update: Update | None, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Global error handler: log traceback, reply with generic localized message.
+
+    Swallows any TelegramError that occurs while trying to deliver the error notice.
+    """
+    logger.error("Unhandled exception:", exc_info=context.error)
+
+    if update is None or update.effective_user is None:
+        return
+
+    user_id = update.effective_user.id
+    config_store: ConfigStore | None = context.bot_data.get("config_store")
+    lang = "en"
+    if config_store is not None:
+        lang = await config_store.get_language(user_id)
+
+    chat_id = update.effective_chat.id if update.effective_chat else None
+    if chat_id is None:
+        return
+
+    try:
+        await context.bot.send_message(chat_id=chat_id, text=get_text("card_error_generic", lang))
+    except TelegramError:
+        # Swallow — nothing more we can do.
+        pass
+
+
 def main() -> None:
     """Entry point — load config, initialize services, start polling."""
     logging.basicConfig(
@@ -111,17 +147,28 @@ def main() -> None:
 
     # Initialize services via post_init (runs after application is fully built)
     async def post_init(application: Application) -> None:  # type: ignore[type-arg]
+        from bot.services.command_registry import register_all
+
         await init_db(config.db_path)
         client = LubeLoggerClient(
             config.lubelogger_url, config.lubelogger_api_key, config.http_timeout
         )
         queue_service = QueueService(config.db_path, config.max_retry_attempts)
         config_store = ConfigStore(config.db_path)
+        tracker = OdometerTracker(config.db_path)
+        card_service = CardService(application.bot)
+        submitter = RecordSubmitter(client, queue_service, tracker, config_store)
 
         application.bot_data["lubelogger_client"] = client
         application.bot_data["queue_service"] = queue_service
         application.bot_data["config_store"] = config_store
         application.bot_data["allowed_user_ids"] = config.allowed_user_ids
+        application.bot_data["tracker"] = tracker
+        application.bot_data["card_service"] = card_service
+        application.bot_data["submitter"] = submitter
+
+        # Register BotFather commands in all locales and per-chat (Req 2.1-2.6).
+        await register_all(application.bot, config_store, config.allowed_user_ids)
 
         # Set up retry job (every queue_retry_interval seconds)
         if application.job_queue is not None:
@@ -141,10 +188,14 @@ def main() -> None:
 
     # Register handlers — all with auth filter
 
-    # Conversation handlers (auth filter on entry points)
-    app.add_handler(get_fuel_conversation_handler(auth_filter=auth))
-    app.add_handler(get_service_conversation_handler(auth_filter=auth))
-    app.add_handler(get_odometer_conversation_handler(auth_filter=auth))
+    # Unified record conversation handler (fuel, service, km)
+    # Must be registered BEFORE the menu label handler (catch-all for TEXT & ~COMMAND).
+    app.add_handler(get_record_conversation_handler(auth_filter=auth))
+
+    # Menu handlers (start command + menu label routing)
+    menu_start, menu_labels = get_menu_handlers(auth_filter=auth)
+    app.add_handler(menu_start)
+    app.add_handler(menu_labels)
 
     # Vehicle handlers (command + callback)
     vehicle_cmd, vehicle_cb = get_vehicle_handlers(auth_filter=auth)
@@ -152,15 +203,37 @@ def main() -> None:
     app.add_handler(vehicle_cb)
 
     # Settings handlers
-    start_handler, lang_handler, lang_cb = get_settings_handlers(auth_filter=auth)
-    app.add_handler(start_handler)
-    app.add_handler(lang_handler)
+    lang_cmd, lang_cb = get_settings_handlers(auth_filter=auth)
+    app.add_handler(lang_cmd)
     app.add_handler(lang_cb)
 
     # Query handlers
     app.add_handler(CommandHandler("last", last_command, filters=auth))
     app.add_handler(CommandHandler("status", status_command, filters=auth))
     app.add_handler(CommandHandler("queue", queue_command, filters=auth))
+
+    # Options callbacks (^oo:, ^ob: → handle_options_callback; ^vs: → vehicle; ^ls: → language)
+    options_pattern = f"^{CallbackAction.OPTIONS_OPEN.value}:|^{CallbackAction.OPTIONS_BACK.value}:"
+    app.add_handler(CallbackQueryHandler(handle_options_callback, pattern=options_pattern))
+    app.add_handler(
+        CallbackQueryHandler(
+            handle_vehicle_selection, pattern=f"^{CallbackAction.VEHICLE_SET.value}:"
+        )
+    )
+    app.add_handler(
+        CallbackQueryHandler(
+            handle_language_selection, pattern=f"^{CallbackAction.LANG_SET.value}:"
+        )
+    )
+
+    # Latest callbacks (^lo:, ^lb: → handle_latest_callback)
+    latest_pattern = (
+        f"^{CallbackAction.LATEST_OPEN.value}:|^{CallbackAction.LATEST_BACK.value}:"
+    )
+    app.add_handler(CallbackQueryHandler(handle_latest_callback, pattern=latest_pattern))
+
+    # Global error handler (Requirement 11.7)
+    app.add_error_handler(error_handler)
 
     # Start polling
     app.run_polling()

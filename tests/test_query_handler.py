@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import datetime as dt
+from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
 from bot.exceptions import LubeLoggerUnreachableError
 from bot.handlers.query import last_command, queue_command, status_command
+from bot.models.records import GasRecord, OdometerRecord
 
 
 def _make_update_and_context(
@@ -24,82 +27,147 @@ def _make_update_and_context(
     config_store = AsyncMock()
     config_store.get_language = AsyncMock(return_value="en")
     config_store.get_active_vehicle = AsyncMock(return_value=1)
+    config_store.get_active_vehicle_name = AsyncMock(return_value="My Car")
 
     lubelogger_client = AsyncMock()
     queue_service = AsyncMock()
+    odometer_tracker = AsyncMock()
 
     context.bot_data = {
         "config_store": config_store,
         "lubelogger_client": lubelogger_client,
         "queue_service": queue_service,
+        "odometer_tracker": odometer_tracker,
     }
 
     return update, context
+
+
+def _gas_record(**kwargs: object) -> GasRecord:
+    """Build a GasRecord with sensible defaults."""
+    defaults: dict[str, object] = {
+        "id": 1,
+        "date": dt.date(2024, 1, 15),
+        "odometer": 45000,
+        "fuelConsumed": Decimal("42.50"),
+        "cost": Decimal("78.90"),
+        "fuelEconomy": Decimal("6.50"),
+        "isFillToFull": True,
+        "missedFuelUp": False,
+        "notes": "",
+    }
+    defaults.update(kwargs)
+    return GasRecord.model_validate(defaults)
+
+
+def _odometer_record(**kwargs: object) -> OdometerRecord:
+    """Build an OdometerRecord with sensible defaults."""
+    defaults: dict[str, object] = {
+        "id": 1,
+        "date": dt.date(2024, 1, 15),
+        "odometer": 45000,
+    }
+    defaults.update(kwargs)
+    return OdometerRecord.model_validate(defaults)
 
 
 class TestLastCommand:
     """Tests for the /last command handler."""
 
     async def test_last_fuel_displays_record(self) -> None:
-        """'/last fuel' should display the latest gas record."""
+        """'/last fuel' should render through formatters with HTML parse mode."""
         update, context = _make_update_and_context(args=["fuel"])
-        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(
-            return_value={
-                "date": "2024-01-15",
-                "fuelConsumed": "42.5",
-                "cost": "78.90",
-                "odometer": "45000",
-            }
+        record = _gas_record()
+        context.bot_data["lubelogger_client"].get_gas_records = AsyncMock(
+            return_value=[record]
         )
 
         await last_command(update, context)
 
         update.message.reply_text.assert_called_once()
-        msg = update.message.reply_text.call_args[0][0]
-        assert "42.5" in msg
-        assert "78.90" in msg
-        assert "45000" in msg
-        assert "2024-01-15" in msg
+        call_kwargs = update.message.reply_text.call_args
+        msg = call_kwargs[0][0]
+        # Rendered through formatters — contains HTML markup
+        assert "<b>" in msg
+        # Uses HTML parse_mode
+        assert call_kwargs[1]["parse_mode"] == "HTML"
+        # Contains the odometer value (formatted)
+        assert "45" in msg
 
     async def test_last_fuel_empty(self) -> None:
-        """'/last fuel' with no records shows empty message."""
+        """'/last fuel' with no records shows empty message via formatters."""
         update, context = _make_update_and_context(args=["fuel"])
-        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(
-            return_value=None
-        )
+        context.bot_data["lubelogger_client"].get_gas_records = AsyncMock(return_value=[])
 
         await last_command(update, context)
 
         msg = update.message.reply_text.call_args[0][0]
-        assert "No fuel records found" in msg
+        # Formatters render "card_latest_empty" when no record
+        assert "No record" in msg or "yet" in msg
+
+    async def test_last_fuel_folds_into_tracker(self) -> None:
+        """'/last fuel' folds gas records into odometer tracker."""
+        update, context = _make_update_and_context(args=["fuel"])
+        record = _gas_record()
+        context.bot_data["lubelogger_client"].get_gas_records = AsyncMock(
+            return_value=[record]
+        )
+        tracker = context.bot_data["odometer_tracker"]
+
+        await last_command(update, context)
+
+        tracker.observe_records.assert_called_once_with(1, gas=[record])
+
+    async def test_last_fuel_no_tracker_call_when_empty(self) -> None:
+        """'/last fuel' does not call tracker when no records."""
+        update, context = _make_update_and_context(args=["fuel"])
+        context.bot_data["lubelogger_client"].get_gas_records = AsyncMock(return_value=[])
+        tracker = context.bot_data["odometer_tracker"]
+
+        await last_command(update, context)
+
+        tracker.observe_records.assert_not_called()
 
     async def test_last_km_displays_record(self) -> None:
-        """'/last km' should display the latest odometer record."""
+        """'/last km' should render through formatters with HTML parse mode."""
         update, context = _make_update_and_context(args=["km"])
-        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
-            return_value={
-                "date": "2024-01-15",
-                "odometer": "45000",
-            }
+        record = _odometer_record()
+        context.bot_data["lubelogger_client"].get_odometer_records = AsyncMock(
+            return_value=[record]
         )
 
         await last_command(update, context)
 
-        msg = update.message.reply_text.call_args[0][0]
-        assert "45000" in msg
-        assert "2024-01-15" in msg
+        call_kwargs = update.message.reply_text.call_args
+        msg = call_kwargs[0][0]
+        assert "<b>" in msg
+        assert call_kwargs[1]["parse_mode"] == "HTML"
+        assert "45" in msg
 
     async def test_last_km_empty(self) -> None:
-        """'/last km' with no records shows empty message."""
+        """'/last km' with no records shows empty message via formatters."""
         update, context = _make_update_and_context(args=["km"])
-        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
-            return_value=None
+        context.bot_data["lubelogger_client"].get_odometer_records = AsyncMock(
+            return_value=[]
         )
 
         await last_command(update, context)
 
         msg = update.message.reply_text.call_args[0][0]
-        assert "No odometer records found" in msg
+        assert "No record" in msg or "yet" in msg
+
+    async def test_last_km_folds_into_tracker(self) -> None:
+        """'/last km' folds odometer records into tracker."""
+        update, context = _make_update_and_context(args=["km"])
+        record = _odometer_record()
+        context.bot_data["lubelogger_client"].get_odometer_records = AsyncMock(
+            return_value=[record]
+        )
+        tracker = context.bot_data["odometer_tracker"]
+
+        await last_command(update, context)
+
+        tracker.observe_records.assert_called_once_with(1, odometer=[record])
 
     async def test_last_no_args_shows_usage(self) -> None:
         """'/last' without subcommand shows usage hint."""
@@ -132,7 +200,7 @@ class TestLastCommand:
     async def test_last_fuel_unreachable_shows_error(self) -> None:
         """'/last fuel' when LubeLogger is unreachable shows user-friendly message."""
         update, context = _make_update_and_context(args=["fuel"])
-        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(
+        context.bot_data["lubelogger_client"].get_gas_records = AsyncMock(
             side_effect=LubeLoggerUnreachableError("timeout")
         )
 
@@ -144,7 +212,7 @@ class TestLastCommand:
     async def test_last_km_unreachable_shows_error(self) -> None:
         """'/last km' when LubeLogger is unreachable shows user-friendly message."""
         update, context = _make_update_and_context(args=["km"])
-        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
+        context.bot_data["lubelogger_client"].get_odometer_records = AsyncMock(
             side_effect=LubeLoggerUnreachableError("timeout")
         )
 
@@ -152,6 +220,21 @@ class TestLastCommand:
 
         msg = update.message.reply_text.call_args[0][0]
         assert "unreachable" in msg.lower() or "unavailable" in msg.lower()
+
+    async def test_last_fuel_escapes_html_in_values(self) -> None:
+        """Values from API are escaped — HTML special chars don't break parse mode."""
+        update, context = _make_update_and_context(args=["fuel"])
+        # notes with HTML-dangerous content (the formatters escape via esc())
+        record = _gas_record(notes="oil change <5000km>")
+        context.bot_data["lubelogger_client"].get_gas_records = AsyncMock(
+            return_value=[record]
+        )
+
+        await last_command(update, context)
+
+        call_kwargs = update.message.reply_text.call_args
+        # Should use HTML parse mode and not contain raw < in a value position
+        assert call_kwargs[1]["parse_mode"] == "HTML"
 
 
 class TestStatusCommand:

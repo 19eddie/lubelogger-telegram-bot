@@ -1,136 +1,46 @@
-"""Odometer record handler — inline args or conversation flow for /km command."""
+"""Odometer record handler — inline-argument submission or guided flow delegation.
+
+With arguments: parse → validate → submit through RecordSubmitter → render rich confirmation.
+Without arguments: delegate to ``start_flow`` (the unified ConversationHandler takes over).
+
+Requirements: 12.1, 12.2, 12.3, 12.4, 13.1
+"""
 
 from __future__ import annotations
 
 import logging
-import re
+from datetime import date
 
 from pydantic import ValidationError
 from telegram import Update
 from telegram.ext import (
-    CommandHandler,
     ContextTypes,
     ConversationHandler,
-    MessageHandler,
-    filters,
 )
 
-from bot.exceptions import LubeLoggerUnreachableError, ParseError
+from bot.callbacks import NO_TOKEN
+from bot.exceptions import LubeLoggerApiError, ParseError
+from bot.flows.definitions import FlowKind
+from bot.flows.views import ConfirmationView, FieldEntry
+from bot.formatters import render_confirmation, render_queued, render_regression
+from bot.handlers.record_flow import COLLECT, start_flow
 from bot.i18n import get_text
-from bot.models.payloads import OdometerRecordPayload
-from bot.models.validators import OdometerRecordModel
-from bot.services.command_parser import CommandParser
+from bot.keyboards import confirmation_keyboard
+from bot.services.command_parser import CommandParser, parse_vehicle_override
 from bot.services.config_store import ConfigStore
-from bot.services.lubelogger_client import LubeLoggerClient
-from bot.services.queue_service import QueueService
+from bot.services.odometer_tracker import OdometerTracker
+from bot.services.record_submitter import RecordSubmitter
 
 logger = logging.getLogger(__name__)
 
-# Conversation states
-ODOMETER = 0
-
-# Regex for --vehicle <id> override
-_VEHICLE_OVERRIDE_RE = re.compile(r"--vehicle\s+(\d+)")
+END = ConversationHandler.END
 
 
-def _extract_vehicle_override(args: str) -> tuple[str, int | None]:
-    """Extract --vehicle <id> from args string and return remaining args + vehicle_id.
-
-    Args:
-        args: The raw argument string from the command.
+async def km_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle /km — inline submission with args, guided flow without.
 
     Returns:
-        Tuple of (remaining_args, vehicle_id_override or None).
-    """
-    match = _VEHICLE_OVERRIDE_RE.search(args)
-    if match:
-        vehicle_id = int(match.group(1))
-        remaining = _VEHICLE_OVERRIDE_RE.sub("", args).strip()
-        return remaining, vehicle_id
-    return args, None
-
-
-async def _get_vehicle_id(
-    user_id: int, config_store: ConfigStore, override: int | None
-) -> int | None:
-    """Resolve the vehicle ID from override or active vehicle config.
-
-    Args:
-        user_id: Telegram user ID.
-        config_store: The config store instance.
-        override: Optional vehicle ID override from --vehicle flag.
-
-    Returns:
-        The resolved vehicle ID, or None if no vehicle is configured.
-    """
-    if override is not None:
-        return override
-    return await config_store.get_active_vehicle(user_id)
-
-
-async def _submit_odometer(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    odometer_value: str,
-    vehicle_override: int | None = None,
-) -> None:
-    """Validate and submit an odometer record.
-
-    Args:
-        update: The Telegram update.
-        context: The bot context with shared services.
-        odometer_value: The raw odometer string value.
-        vehicle_override: Optional vehicle ID from --vehicle flag.
-    """
-    config_store: ConfigStore = context.bot_data["config_store"]
-    client: LubeLoggerClient = context.bot_data["lubelogger_client"]
-    queue_service: QueueService = context.bot_data["queue_service"]
-    user_id = update.effective_user.id  # type: ignore[union-attr]
-    lang = await config_store.get_language(user_id)
-
-    vehicle_id = await _get_vehicle_id(user_id, config_store, vehicle_override)
-    if vehicle_id is None:
-        await update.message.reply_text(get_text("no_vehicle", lang))  # type: ignore[union-attr]
-        return
-
-    # Validate
-    try:
-        record = OdometerRecordModel(odometer=odometer_value)
-    except ValidationError:
-        await update.message.reply_text(  # type: ignore[union-attr]
-            get_text("invalid_odometer", lang)
-        )
-        return
-
-    # Build payload
-    payload = OdometerRecordPayload.from_validated(record)
-
-    # Submit or queue
-    try:
-        await client.add_odometer_record(vehicle_id, payload)
-        await update.message.reply_text(  # type: ignore[union-attr]
-            get_text("odometer_saved", lang, odometer=record.odometer)
-        )
-    except LubeLoggerUnreachableError:
-        await queue_service.enqueue(
-            user_id=user_id,
-            vehicle_id=vehicle_id,
-            record_type="odometer",
-            payload=payload.model_dump_json(by_alias=True),
-        )
-        await update.message.reply_text(  # type: ignore[union-attr]
-            get_text("odometer_queued", lang)
-        )
-
-
-async def km_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
-    """Handle /km command — inline args or start conversation.
-
-    If arguments are provided, parse and submit immediately.
-    If no arguments, prompt user for odometer reading (conversation mode).
-
-    Returns:
-        ConversationHandler.END or ODOMETER state, or None for inline mode.
+        ConversationHandler.END for inline path, or COLLECT state for guided flow.
     """
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id  # type: ignore[union-attr]
@@ -141,92 +51,97 @@ async def km_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int 
     parts = message_text.split(None, 1)
     raw_args = parts[1] if len(parts) > 1 else ""
 
-    if not raw_args.strip():
-        # No args — start conversation
-        await update.message.reply_text(  # type: ignore[union-attr]
-            get_text("prompt_odometer", lang)
+    # Extract --vehicle override
+    vehicle_override, remaining_args = parse_vehicle_override(raw_args)
+
+    if not remaining_args.strip():
+        # No args → delegate to guided flow
+        return await start_flow(
+            update, context, kind=FlowKind.ODOMETER, vehicle_override=vehicle_override
         )
-        return ODOMETER
 
-    # Inline mode: extract vehicle override and parse
-    remaining_args, vehicle_override = _extract_vehicle_override(raw_args)
+    # --- Inline-argument path ---
 
+    # Resolve vehicle ID
+    vehicle_id: int | None = vehicle_override
+    if vehicle_id is None:
+        vehicle_id = await config_store.get_active_vehicle(user_id)
+    if vehicle_id is None:
+        await update.message.reply_text(get_text("no_vehicle", lang))  # type: ignore[union-attr]
+        return END
+
+    # Parse
     try:
         parsed = CommandParser.parse_odometer(remaining_args)
-    except ParseError as exc:
-        await update.message.reply_text(  # type: ignore[union-attr]
-            get_text("usage_km", lang)
-        )
-        logger.debug("Parse error for /km: %s", exc.hint)
-        return ConversationHandler.END
+    except ParseError:
+        await update.message.reply_text(get_text("usage_km", lang))  # type: ignore[union-attr]
+        return END
 
-    await _submit_odometer(update, context, parsed.odometer, vehicle_override)
-    return ConversationHandler.END
-
-
-async def odometer_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle odometer value received in conversation mode.
-
-    Args:
-        update: The Telegram update containing user's odometer input.
-        context: The bot context with shared services.
-
-    Returns:
-        ConversationHandler.END to finish the conversation.
-    """
-    config_store: ConfigStore = context.bot_data["config_store"]
-    user_id = update.effective_user.id  # type: ignore[union-attr]
-    lang = await config_store.get_language(user_id)
-    text = update.message.text.strip()  # type: ignore[union-attr]
-
-    # Normalize decimal separator
-    normalized = CommandParser.normalize_decimal(text)
-
-    # Validate it's a number
+    # Build values dict
     try:
-        float(normalized)
-    except ValueError:
-        await update.message.reply_text(  # type: ignore[union-attr]
-            get_text("invalid_odometer", lang)
+        odometer = int(float(parsed.odometer))
+    except (ValueError, TypeError):
+        await update.message.reply_text(get_text("usage_km", lang))  # type: ignore[union-attr]
+        return END
+
+    if odometer <= 0:
+        await update.message.reply_text(get_text("usage_km", lang))  # type: ignore[union-attr]
+        return END
+
+    values: dict[str, object] = {"odometer": odometer}
+
+    # Odometer regression check (warn but proceed — Req 5.10, 12.1)
+    tracker: OdometerTracker = context.bot_data["tracker"]
+    reference = await tracker.get_reference(vehicle_id)
+    if reference is not None and odometer < reference.value:
+        warning = render_regression(odometer, reference, lang)
+        await update.message.reply_text(warning, parse_mode="HTML")  # type: ignore[union-attr]
+
+    # Submit
+    submitter: RecordSubmitter = context.bot_data["record_submitter"]
+    try:
+        outcome = await submitter.submit(
+            user_id=user_id,
+            vehicle_id=vehicle_id,
+            kind=FlowKind.ODOMETER,
+            values=values,
         )
-        return ConversationHandler.END
+    except (LubeLoggerApiError, ValidationError) as exc:
+        logger.warning("Inline odometer submit failed: %s", exc)
+        await update.message.reply_text(get_text("usage_km", lang))  # type: ignore[union-attr]
+        return END
 
-    await _submit_odometer(update, context, normalized)
-    return ConversationHandler.END
-
-
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /cancel — abort the conversation.
-
-    Returns:
-        ConversationHandler.END to finish the conversation.
-    """
-    config_store: ConfigStore = context.bot_data["config_store"]
-    user_id = update.effective_user.id  # type: ignore[union-attr]
-    lang = await config_store.get_language(user_id)
-
-    await update.message.reply_text(  # type: ignore[union-attr]
-        get_text("conversation_cancelled", lang)
+    # Build confirmation view
+    entries = _build_odometer_entries(values, lang)
+    view = ConfirmationView(
+        kind=FlowKind.ODOMETER,
+        vehicle_name=outcome.vehicle_name,
+        on_date=date.today(),
+        entries=entries,
+        consumption=None,
     )
-    return ConversationHandler.END
+
+    if outcome.status == "saved":
+        text = render_confirmation(view, lang)
+        markup = confirmation_keyboard(NO_TOKEN, queued=False, lang=lang)
+    else:
+        text = render_queued(view, lang)
+        markup = confirmation_keyboard(NO_TOKEN, queued=True, lang=lang)
+
+    await update.message.reply_text(text, parse_mode="HTML", reply_markup=markup)  # type: ignore[union-attr]
+    return END
 
 
-def get_odometer_conversation_handler(
-    auth_filter: filters.BaseFilter | None = None,
-) -> ConversationHandler:
-    """Create and return the ConversationHandler for /km command.
+def _build_odometer_entries(values: dict[str, object], lang: str) -> tuple[FieldEntry, ...]:
+    """Build FieldEntry tuples for odometer values."""
+    from bot.formatters import fmt_int
 
-    Args:
-        auth_filter: Optional filter to restrict entry to authorized users.
+    odometer = int(values["odometer"])  # type: ignore[arg-type]
 
-    Returns:
-        A ConversationHandler managing the odometer entry flow.
-    """
-    return ConversationHandler(
-        entry_points=[CommandHandler("km", km_command, filters=auth_filter)],
-        states={
-            ODOMETER: [MessageHandler(filters.TEXT & ~filters.COMMAND, odometer_received)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-        allow_reentry=True,
+    return (
+        FieldEntry(
+            index=0,
+            label_key="field_odometer",
+            rendered_value=f"{fmt_int(odometer, lang)} {get_text('fmt_unit_distance', lang)}",
+        ),
     )

@@ -69,3 +69,45 @@ async def test_multi_user_isolation(store: ConfigStore) -> None:
     assert await store.get_language(12345) == "it"
     assert await store.get_active_vehicle(99999) == 7
     assert await store.get_language(99999) == "en"
+
+
+async def test_get_active_vehicle_name_returns_none_for_unknown_user(store: ConfigStore) -> None:
+    assert await store.get_active_vehicle_name(12345) is None
+
+
+async def test_set_active_vehicle_stores_name_when_given(store: ConfigStore) -> None:
+    await store.set_active_vehicle(12345, 42, "2020 Toyota Yaris")
+    assert await store.get_active_vehicle(12345) == 42
+    assert await store.get_active_vehicle_name(12345) == "2020 Toyota Yaris"
+
+
+async def test_set_active_vehicle_preserves_name_when_omitted(store: ConfigStore) -> None:
+    await store.set_active_vehicle(12345, 42, "2020 Toyota Yaris")
+    await store.set_active_vehicle(12345, 7)
+    assert await store.get_active_vehicle(12345) == 7
+    assert await store.get_active_vehicle_name(12345) == "2020 Toyota Yaris"
+
+
+async def test_set_active_vehicle_without_name_defaults_to_empty(store: ConfigStore) -> None:
+    await store.set_active_vehicle(12345, 42)
+    assert await store.get_active_vehicle_name(12345) == ""
+
+
+async def test_name_preserved_after_language_change(store: ConfigStore) -> None:
+    await store.set_active_vehicle(12345, 42, "Vespa PX")
+    await store.set_language(12345, "it")
+    assert await store.get_active_vehicle_name(12345) == "Vespa PX"
+    assert await store.get_active_vehicle(12345) == 42
+
+
+async def test_get_all_languages_returns_every_known_user(store: ConfigStore) -> None:
+    await store.set_language(12345, "it")
+    await store.set_active_vehicle(99999, 7)
+
+    languages = await store.get_all_languages()
+
+    assert languages == {12345: "it", 99999: "en"}
+
+
+async def test_get_all_languages_empty_when_no_users(store: ConfigStore) -> None:
+    assert await store.get_all_languages() == {}

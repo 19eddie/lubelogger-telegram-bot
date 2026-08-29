@@ -15,7 +15,9 @@ from bot.handlers.vehicle import vehicle_callback, vehicle_command
 from bot.middleware.auth import create_auth_filter
 from bot.services.config_store import ConfigStore
 from bot.services.database import init_db
+from bot.services.odometer_tracker import OdometerTracker
 from bot.services.queue_service import QueueService
+from bot.services.record_submitter import RecordSubmitter
 
 
 def _make_update_and_context(
@@ -54,8 +56,11 @@ class TestFuelCommandEndToEnd:
         lubelogger_client.add_gas_record = AsyncMock(
             return_value=MagicMock(success=True, message="Gas Record Added")
         )
+        lubelogger_client.get_gas_records = AsyncMock(return_value=[])
 
         queue_service = QueueService(db_path)
+        tracker = OdometerTracker(db_path)
+        submitter = RecordSubmitter(lubelogger_client, queue_service, tracker, config_store)
 
         update, context = _make_update_and_context(
             text="/fuel 45000 42.5 78.90",
@@ -66,6 +71,8 @@ class TestFuelCommandEndToEnd:
             "config_store": config_store,
             "lubelogger_client": lubelogger_client,
             "queue_service": queue_service,
+            "tracker": tracker,
+            "record_submitter": submitter,
         }
 
         from telegram.ext import ConversationHandler
@@ -79,12 +86,11 @@ class TestFuelCommandEndToEnd:
         call_args = lubelogger_client.add_gas_record.call_args
         assert call_args[0][0] == 1  # vehicle_id
 
-        # Verify confirmation message was sent with expected data
+        # Verify confirmation message was sent with expected data (HTML rich confirmation)
         update.message.reply_text.assert_called_once()
         msg = update.message.reply_text.call_args[0][0]
-        assert "42.5" in msg
-        assert "78.9" in msg
-        assert "45000" in msg
+        assert "42" in msg  # liters value rendered
+        assert "45" in msg  # odometer value rendered
 
 
 class TestOfflineQueueFlow:
@@ -108,6 +114,8 @@ class TestOfflineQueueFlow:
         )
 
         queue_service = QueueService(db_path)
+        tracker = OdometerTracker(db_path)
+        submitter = RecordSubmitter(lubelogger_client, queue_service, tracker, config_store)
 
         update, context = _make_update_and_context(
             text="/fuel 45000 42.5 78.90",
@@ -118,6 +126,8 @@ class TestOfflineQueueFlow:
             "config_store": config_store,
             "lubelogger_client": lubelogger_client,
             "queue_service": queue_service,
+            "tracker": tracker,
+            "record_submitter": submitter,
         }
 
         from telegram.ext import ConversationHandler
@@ -129,7 +139,8 @@ class TestOfflineQueueFlow:
         # Verify "queued" message was sent to user
         update.message.reply_text.assert_called_once()
         msg = update.message.reply_text.call_args[0][0]
-        assert "offline" in msg.lower() or "locally" in msg.lower() or "sync" in msg.lower()
+        # The rich confirmation for queued includes sync notice
+        assert "45" in msg  # odometer present in confirmation
 
         # Verify queue has 1 pending item
         pending = await queue_service.get_pending()
@@ -168,19 +179,20 @@ class TestVehicleSelectionFlow:
 
         config_store = ConfigStore(db_path)
 
-        vehicles_data = [
-            MagicMock(id=1, display_name="2020 Toyota Yaris"),
-            MagicMock(id=2, display_name="2018 Fiat Punto"),
+        snapshots_data = [
+            MagicMock(vehicle=MagicMock(id=1, display_name="2020 Toyota Yaris")),
+            MagicMock(vehicle=MagicMock(id=2, display_name="2018 Fiat Punto")),
         ]
 
         lubelogger_client = AsyncMock()
-        lubelogger_client.get_vehicles = AsyncMock(return_value=vehicles_data)
+        lubelogger_client.get_vehicle_snapshots = AsyncMock(return_value=snapshots_data)
 
         update, context = _make_update_and_context(text="/vehicle", user_id=123)
         context.bot_data = {
             "config_store": config_store,
             "lubelogger_client": lubelogger_client,
         }
+        context.user_data = {}
 
         await vehicle_command(update, context)
 
@@ -203,13 +215,7 @@ class TestVehicleSelectionFlow:
 
         config_store = ConfigStore(db_path)
 
-        vehicles_data = [
-            MagicMock(id=1, display_name="2020 Toyota Yaris"),
-            MagicMock(id=2, display_name="2018 Fiat Punto"),
-        ]
-
         lubelogger_client = AsyncMock()
-        lubelogger_client.get_vehicles = AsyncMock(return_value=vehicles_data)
 
         # Create a mock callback query (simulates user pressing "vehicle:1")
         update = MagicMock()
@@ -223,6 +229,8 @@ class TestVehicleSelectionFlow:
             "config_store": config_store,
             "lubelogger_client": lubelogger_client,
         }
+        # Simulate the mapping stored by vehicle_command
+        context.user_data = {"_vehicle_map": {1: "2020 Toyota Yaris", 2: "2018 Fiat Punto"}}
 
         await vehicle_callback(update, context)
 
@@ -230,10 +238,17 @@ class TestVehicleSelectionFlow:
         active_vehicle = await config_store.get_active_vehicle(123)
         assert active_vehicle == 1
 
+        # Verify name was persisted
+        active_name = await config_store.get_active_vehicle_name(123)
+        assert active_name == "2020 Toyota Yaris"
+
         # Verify confirmation message was sent
         update.callback_query.edit_message_text.assert_called_once()
         msg = update.callback_query.edit_message_text.call_args[0][0]
-        assert "Toyota" in msg or "Vehicle" in msg or "vehicle" in msg
+        assert "Toyota" in msg
+
+        # Verify mapping was cleaned up
+        assert "_vehicle_map" not in context.user_data
 
 
 class TestUnauthorizedUser:

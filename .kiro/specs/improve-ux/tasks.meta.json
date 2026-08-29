@@ -1,0 +1,1487 @@
+{
+  "pbtResults": {
+    "2.4 Write property test for active vehicle name persistence": {
+      "status": "passed",
+      "lastRunTimestamp": 1785532663377
+    },
+    "1.5 Write property test for locale completeness and key convention": {
+      "status": "passed",
+      "lastRunTimestamp": 1785532710751
+    },
+    "3.3 Write property test for loose parsing equivalence": {
+      "status": "passed",
+      "lastRunTimestamp": 1785532744777
+    },
+    "2.6 Write property test for the odometer fold": {
+      "status": "passed",
+      "lastRunTimestamp": 1785533633593
+    },
+    "2.7 Write property test for persisted odometer monotonicity": {
+      "status": "passed",
+      "lastRunTimestamp": 1785534211067
+    },
+    "5.2 Write property test for the callback codec": {
+      "status": "passed",
+      "lastRunTimestamp": 1785534227193
+    },
+    "5.4 Write property test for the consumption conditions": {
+      "status": "passed",
+      "lastRunTimestamp": 1785534433213
+    },
+    "5.5 Write property test for the consumption source preference": {
+      "status": "passed",
+      "lastRunTimestamp": 1785535387675
+    },
+    "6.2 Write property test for in-flow keyboard invariants": {
+      "status": "passed",
+      "lastRunTimestamp": 1785535743834
+    },
+    "6.3 Write property test for Menu_Label resolution": {
+      "status": "passed",
+      "lastRunTimestamp": 1785536120131
+    },
+    "7.4 Write property test for the Progress_Indicator": {
+      "status": "passed",
+      "lastRunTimestamp": 1785536544588
+    },
+    "7.5 Write property test for card completeness": {
+      "status": "passed",
+      "lastRunTimestamp": 1785537926158
+    },
+    "7.6 Write property test for summary completeness": {
+      "status": "passed",
+      "lastRunTimestamp": 1785538292072
+    },
+    "9.3 Write property test for the edit-failure fallback": {
+      "status": "passed",
+      "lastRunTimestamp": 1785538664747
+    },
+    "7.7 Write property test for confirmation completeness": {
+      "status": "passed",
+      "lastRunTimestamp": 1785538691218
+    },
+    "7.8 Write property test for queued/saved parity": {
+      "status": "passed",
+      "lastRunTimestamp": 1785538986691
+    },
+    "9.4 Write property test for the deletion scope": {
+      "status": "passed",
+      "lastRunTimestamp": 1785539087405
+    },
+    "7.10 Write property test for decimal round-trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1785567701119
+    },
+    "7.11 Write property test for the localized vehicle fallback": {
+      "status": "passed",
+      "lastRunTimestamp": 1785567703329
+    },
+    "10.2 Write property test for queue round-trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1785568526868
+    },
+    "11.2 Write property test for the callback guard": {
+      "status": "passed",
+      "lastRunTimestamp": 1785569360604
+    },
+    "11.7 Write property test for invalid typed values": {
+      "status": "passed",
+      "lastRunTimestamp": 1785570800822
+    },
+    "11.9 Write property test for the regression gate": {
+      "status": "passed",
+      "lastRunTimestamp": 1785570832532
+    },
+    "11.13 Write property test for cancellation equivalence": {
+      "status": "passed",
+      "lastRunTimestamp": 1785570869987
+    },
+    "11.17 Write property test for log privacy": {
+      "status": "passed",
+      "lastRunTimestamp": 1785570897668
+    },
+    "11.16 Write property test for Log another": {
+      "status": "passed",
+      "lastRunTimestamp": 1785571041184
+    },
+    "11.14 Write property test for Menu_Label navigation": {
+      "status": "passed",
+      "lastRunTimestamp": 1785571089301
+    },
+    "11.11 Write property test for single-field editing": {
+      "status": "passed",
+      "lastRunTimestamp": 1785571097173
+    },
+    "11.4 Write property test for the API call budget": {
+      "status": "passed",
+      "lastRunTimestamp": 1785571146510
+    },
+    "11.5 Write property test for one card per operation": {
+      "status": "passed",
+      "lastRunTimestamp": 1785571149923
+    },
+    "13.2 Write property test for offline completion": {
+      "status": "passed",
+      "lastRunTimestamp": 1785576650230
+    },
+    "16.2 Write property test for the vehicle override": {
+      "status": "passed",
+      "lastRunTimestamp": 1785671460518
+    },
+    "16.3 Write property test for inline/guided agreement": {
+      "status": "passed",
+      "lastRunTimestamp": 1785671972140
+    }
+  },
+  "executionHistory": {
+    "1.1 Bump python-telegram-bot to `>=21.0`": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517772393
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517858401
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518552181
+      }
+    ],
+    "1.2 Create the field-table module (`bot/flows/definitions.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517773917
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517862161
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518597303
+      }
+    ],
+    "1.3 Rewrite the locale files under the new key convention": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517774399
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517865895
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518640154
+      }
+    ],
+    "1.4 Extend the i18n module (`bot/i18n.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517775262
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518774364
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532346628
+      }
+    ],
+    "1.5 Write property test for locale completeness and key convention": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517776040
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532555293
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532896320
+      }
+    ],
+    "2.1 Add the schema migration mechanism (`bot/services/database.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517776817
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517869862
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518682765
+      }
+    ],
+    "2.2 Write unit tests for the migration": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517777681
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518778284
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532394279
+      }
+    ],
+    "2.3 Persist the Active_Vehicle_Name (`bot/services/config_store.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517778616
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518782377
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532445942
+      }
+    ],
+    "2.4 Write property test for active vehicle name persistence": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517779462
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532559073
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532946576
+      }
+    ],
+    "2.5 Implement the odometer tracker (`bot/services/odometer_tracker.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517780236
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532562648
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532992552
+      }
+    ],
+    "2.6 Write property test for the odometer fold": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517781367
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533140690
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533721417
+      }
+    ],
+    "2.7 Write property test for persisted odometer monotonicity": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517781882
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534019521
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534449619
+      }
+    ],
+    "3.1 Implement the tolerant coercion helpers (`bot/models/loose.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517782671
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517873585
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518726649
+      }
+    ],
+    "3.2 Implement the read models (`bot/models/records.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517783576
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785518786448
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532500476
+      }
+    ],
+    "3.3 Write property test for loose parsing equivalence": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517784440
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532566128
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533037841
+      }
+    ],
+    "3.4 Extend the LubeLogger client (`bot/services/lubelogger_client.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517785216
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532571312
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533087230
+      }
+    ],
+    "3.5 Write unit tests for the new client methods": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517786044
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533144379
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533775377
+      }
+    ],
+    "4. Checkpoint - Foundations, persistence and read models": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517786899
+      }
+    ],
+    "5.1 Implement the callback_data codec (`bot/callbacks.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517787925
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533149382
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533829288
+      }
+    ],
+    "5.2 Write property test for the callback codec": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517788910
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534034729
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534503236
+      }
+    ],
+    "5.3 Implement the consumption service (`bot/services/consumption.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517789786
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533154350
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533888095
+      }
+    ],
+    "5.4 Write property test for the consumption conditions": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517791019
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534041926
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534555888
+      }
+    ],
+    "5.5 Write property test for the consumption source preference": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517791626
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535245705
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535762148
+      }
+    ],
+    "6.1 Implement the keyboard module (`bot/keyboards.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517792711
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534673878
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535190413
+      }
+    ],
+    "6.2 Write property test for in-flow keyboard invariants": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517793687
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535250077
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535821097
+      }
+    ],
+    "6.3 Write property test for Menu_Label resolution": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517794622
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535926949
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536275862
+      }
+    ],
+    "6.4 Write unit tests for the Menu_Keyboard flags and callback budget": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517795682
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536391765
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536817050
+      }
+    ],
+    "7.1 Implement the view dataclasses (`bot/flows/views.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517796600
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534047752
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534612095
+      }
+    ],
+    "7.2 Implement the core formatters (`bot/formatters.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517797520
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535256193
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535872137
+      }
+    ],
+    "7.3 Implement the confirmation, latest, options and welcome renderers (`bot/formatters.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517798679
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535932014
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536332293
+      }
+    ],
+    "7.4 Write property test for the Progress_Indicator": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517799701
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536396001
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536838637
+      }
+    ],
+    "7.5 Write property test for card completeness": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517801307
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536860930
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538004230
+      }
+    ],
+    "7.6 Write property test for summary completeness": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517801804
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538124231
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538385892
+      }
+    ],
+    "7.7 Write property test for confirmation completeness": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517802338
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538505883
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538705789
+      }
+    ],
+    "7.8 Write property test for queued/saved parity": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517802852
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538829794
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785539103131
+      }
+    ],
+    "7.9 Write property test for HTML escaping": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517803387
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785539232683
+      },
+      {
+        "executionId": "421670a4-58d2-4fef-bd39-9c972471f9e7",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785540242747
+      },
+      {
+        "executionId": "fee47d07-b1bc-4dd3-b657-b009d60c972d",
+        "chatSessionId": "sess_0402df10-e340-4370-8c54-aa88dd2cea5f",
+        "timestamp": 1785567602946
+      },
+      {
+        "executionId": "fee47d07-b1bc-4dd3-b657-b009d60c972d",
+        "chatSessionId": "sess_0402df10-e340-4370-8c54-aa88dd2cea5f",
+        "timestamp": 1785567610904
+      }
+    ],
+    "7.10 Write property test for decimal round-trip": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517804476
+      },
+      {
+        "executionId": "fee47d07-b1bc-4dd3-b657-b009d60c972d",
+        "chatSessionId": "sess_0402df10-e340-4370-8c54-aa88dd2cea5f",
+        "timestamp": 1785567603641
+      },
+      {
+        "executionId": "fee47d07-b1bc-4dd3-b657-b009d60c972d",
+        "chatSessionId": "sess_0402df10-e340-4370-8c54-aa88dd2cea5f",
+        "timestamp": 1785567713950
+      }
+    ],
+    "7.11 Write property test for the localized vehicle fallback": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517805526
+      },
+      {
+        "executionId": "fee47d07-b1bc-4dd3-b657-b009d60c972d",
+        "chatSessionId": "sess_0402df10-e340-4370-8c54-aa88dd2cea5f",
+        "timestamp": 1785567604377
+      },
+      {
+        "executionId": "fee47d07-b1bc-4dd3-b657-b009d60c972d",
+        "chatSessionId": "sess_0402df10-e340-4370-8c54-aa88dd2cea5f",
+        "timestamp": 1785567715103
+      }
+    ],
+    "8. Checkpoint - Pure modules complete": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517806960
+      },
+      {
+        "executionId": "358f5e9d-b111-4a41-bdd3-b0badea8c49a",
+        "chatSessionId": "sess_f0600611-e4a5-4aee-928c-9d6fa25b650c",
+        "timestamp": 1785567785315
+      },
+      {
+        "executionId": "358f5e9d-b111-4a41-bdd3-b0badea8c49a",
+        "chatSessionId": "sess_f0600611-e4a5-4aee-928c-9d6fa25b650c",
+        "timestamp": 1785567956836
+      }
+    ],
+    "9.1 Add the FakeBot fixture (`tests/conftest.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517807603
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536865266
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538064274
+      }
+    ],
+    "9.2 Implement the card service (`bot/services/card_service.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517808548
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538128945
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538444521
+      }
+    ],
+    "9.3 Write property test for the edit-failure fallback": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517809489
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538510325
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538766726
+      }
+    ],
+    "9.4 Write property test for the deletion scope": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517810386
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785538834304
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785539167902
+      }
+    ],
+    "9.5 Write unit tests for the card service error branches": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517810843
+      },
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785539237767
+      },
+      {
+        "executionId": "421670a4-58d2-4fef-bd39-9c972471f9e7",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785540243648
+      },
+      {
+        "executionId": "ecebe792-4017-486e-abd0-b91148743103",
+        "chatSessionId": "sess_43b8d103-4eca-4666-99fe-86f082747a79",
+        "timestamp": 1785568015942
+      },
+      {
+        "executionId": "ecebe792-4017-486e-abd0-b91148743103",
+        "chatSessionId": "sess_43b8d103-4eca-4666-99fe-86f082747a79",
+        "timestamp": 1785568071872
+      }
+    ],
+    "10.1 Implement the record submitter (`bot/services/record_submitter.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517811322
+      },
+      {
+        "executionId": "dd268eab-0108-4112-b7d8-667ae65695d0",
+        "chatSessionId": "sess_d7ff52c5-379d-40c1-b78d-e5f62023b60c",
+        "timestamp": 1785568131626
+      },
+      {
+        "executionId": "dd268eab-0108-4112-b7d8-667ae65695d0",
+        "chatSessionId": "sess_d7ff52c5-379d-40c1-b78d-e5f62023b60c",
+        "timestamp": 1785568407359
+      }
+    ],
+    "10.2 Write property test for queue round-trip": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517811818
+      },
+      {
+        "executionId": "dd268eab-0108-4112-b7d8-667ae65695d0",
+        "chatSessionId": "sess_d7ff52c5-379d-40c1-b78d-e5f62023b60c",
+        "timestamp": 1785568412453
+      },
+      {
+        "executionId": "dd268eab-0108-4112-b7d8-667ae65695d0",
+        "chatSessionId": "sess_d7ff52c5-379d-40c1-b78d-e5f62023b60c",
+        "timestamp": 1785568537830
+      }
+    ],
+    "11.1 Create the flow skeleton, state and guard (`bot/handlers/record_flow.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517812331
+      }
+    ],
+    "11.2 Write property test for the callback guard": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517813504
+      }
+    ],
+    "11.3 Implement flow start with smart defaults": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517814049
+      }
+    ],
+    "11.4 Write property test for the API call budget": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517814880
+      }
+    ],
+    "11.5 Write property test for one card per operation": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517815668
+      }
+    ],
+    "11.6 Implement value collection, choice buttons and suggestion reuse": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517816523
+      }
+    ],
+    "11.7 Write property test for invalid typed values": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517817393
+      }
+    ],
+    "11.8 Implement the odometer regression gate": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517818238
+      }
+    ],
+    "11.9 Write property test for the regression gate": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517819164
+      }
+    ],
+    "11.10 Implement Summary_State, the Field_Picker and save": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517820015
+      }
+    ],
+    "11.11 Write property test for single-field editing": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517820825
+      }
+    ],
+    "11.12 Implement cancellation and flow abandonment": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517821733
+      }
+    ],
+    "11.13 Write property test for cancellation equivalence": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517822600
+      }
+    ],
+    "11.14 Write property test for Menu_Label navigation": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517823449
+      }
+    ],
+    "11.15 Implement the Log another shortcut": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517824326
+      }
+    ],
+    "11.16 Write property test for Log another": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517825234
+      }
+    ],
+    "11.17 Write property test for log privacy": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517826122
+      }
+    ],
+    "11.18 Write unit tests for the smart-default scenarios": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517827043
+      }
+    ],
+    "12. Checkpoint - Guided flow working end to end": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517827952
+      },
+      {
+        "executionId": "4bbcab34-8485-4302-8709-d62bdbdca6be",
+        "chatSessionId": "sess_60e38c6d-2406-416c-8faa-2a33851b31fe",
+        "timestamp": 1785575655334
+      },
+      {
+        "executionId": "0b5caaea-79eb-45ac-9bd4-893058c84c3e",
+        "chatSessionId": "sess_857e1d89-0859-484c-9af5-e19b3f39376a",
+        "timestamp": 1785575853801
+      },
+      {
+        "executionId": "0b5caaea-79eb-45ac-9bd4-893058c84c3e",
+        "chatSessionId": "sess_857e1d89-0859-484c-9af5-e19b3f39376a",
+        "timestamp": 1785576139874
+      }
+    ],
+    "13.1 Wire the queued outcome into the flow": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517828769
+      },
+      {
+        "executionId": "a12366dc-926c-4fda-b60d-f5f7ba8b0834",
+        "chatSessionId": "sess_972b6e58-1c9c-4014-aba8-f726061603ee",
+        "timestamp": 1785576259918
+      },
+      {
+        "executionId": "a12366dc-926c-4fda-b60d-f5f7ba8b0834",
+        "chatSessionId": "sess_972b6e58-1c9c-4014-aba8-f726061603ee",
+        "timestamp": 1785576436448
+      }
+    ],
+    "13.2 Write property test for offline completion": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517829772
+      },
+      {
+        "executionId": "63747588-fa51-48bc-8251-e104149b944a",
+        "chatSessionId": "sess_d5a64193-dd8c-4b0c-9dc8-e2f3f38f69ab",
+        "timestamp": 1785576457481
+      },
+      {
+        "executionId": "63747588-fa51-48bc-8251-e104149b944a",
+        "chatSessionId": "sess_d5a64193-dd8c-4b0c-9dc8-e2f3f38f69ab",
+        "timestamp": 1785576666657
+      }
+    ],
+    "14.1 Implement the menu handler (`bot/handlers/menu.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517830650
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785665710595
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785667364672
+      }
+    ],
+    "14.2 Write unit tests for onboarding and keyboard establishment": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517831490
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785667373764
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785668361906
+      }
+    ],
+    "14.3 Implement the command registry (`bot/services/command_registry.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517832337
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785665713911
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785667368674
+      }
+    ],
+    "14.4 Write property test for the registered command list": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517833197
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785667378483
+      },
+      {
+        "executionId": "8ac109f1-6871-4278-96f9-0fb7a63dfa20",
+        "chatSessionId": "sess_f865a2d9-7715-4ab3-af3e-b03686fd661b",
+        "timestamp": 1785668365937
+      }
+    ],
+    "14.5 Write unit tests for command registration": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517834063
+      }
+    ],
+    "15.1 Implement the Options_Menu handler (`bot/handlers/options.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517834994
+      },
+      {
+        "executionId": "7a4dcb26-a2fc-4e54-bb16-c07df7c8f507",
+        "chatSessionId": "sess_c29eda0e-f3eb-44d3-b5e3-a3b47f18e21c",
+        "timestamp": 1785669983117
+      }
+    ],
+    "15.2 Implement the Latest menu handler (`bot/handlers/latest.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517835882
+      },
+      {
+        "executionId": "7a4dcb26-a2fc-4e54-bb16-c07df7c8f507",
+        "chatSessionId": "sess_c29eda0e-f3eb-44d3-b5e3-a3b47f18e21c",
+        "timestamp": 1785669984108
+      }
+    ],
+    "15.3 Write unit tests for the two menus": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517836745
+      },
+      {
+        "executionId": "7a4dcb26-a2fc-4e54-bb16-c07df7c8f507",
+        "chatSessionId": "sess_c29eda0e-f3eb-44d3-b5e3-a3b47f18e21c",
+        "timestamp": 1785669984597
+      }
+    ],
+    "16.1 Route the inline-argument path through the submitter": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517837660
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785670100686
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671346005
+      }
+    ],
+    "16.2 Write property test for the vehicle override": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517838511
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671351975
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671844021
+      }
+    ],
+    "16.3 Write property test for inline/guided agreement": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517839376
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671859019
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785672027464
+      }
+    ],
+    "16.4 Fix the vehicle and settings handlers": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517840322
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671352745
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671845404
+      }
+    ],
+    "16.5 Write unit test for the single vehicle fetch": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517841144
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671860359
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785672028971
+      }
+    ],
+    "16.6 Render the query commands through the formatters (`bot/handlers/query.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517842039
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671353204
+      },
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785671844905
+      }
+    ],
+    "17.1 Wire everything into the entry point (`bot/main.py`)": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517842912
+      },
+      {
+        "executionId": "57aebbea-a72e-4a55-bcc4-8c628cb9f85e",
+        "chatSessionId": "sess_d31332e2-9759-4fc3-9a61-e4728f182df0",
+        "timestamp": 1785672769854
+      },
+      {
+        "executionId": "57aebbea-a72e-4a55-bcc4-8c628cb9f85e",
+        "chatSessionId": "sess_d31332e2-9759-4fc3-9a61-e4728f182df0",
+        "timestamp": 1785673532991
+      }
+    ],
+    "18.1 Update the tests that assert intentionally changed behaviour": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517843778
+      }
+    ],
+    "19.1 Write the full guided fuel flow integration test": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517844673
+      }
+    ],
+    "19.2 Write the regression test for `fuelEconomy` returned as `\"0\"`": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517845636
+      }
+    ],
+    "19.3 Write the field-picker and regression integration test": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517846528
+      }
+    ],
+    "19.4 Write the offline save and flush integration test": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517847444
+      }
+    ],
+    "19.5 Write the added-locale test": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517848321
+      }
+    ],
+    "20.1 Update the README": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517849179
+      }
+    ],
+    "21. Final checkpoint - Full verification": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785517850234
+      }
+    ],
+    "1. Foundations: dependencies, field tables, locale keys": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785532896900
+      }
+    ],
+    "3. Loose read models and LubeLogger client extensions": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785533776636
+      }
+    ],
+    "2. Local persistence: migration, active vehicle name, odometer tracker": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785534450535
+      }
+    ],
+    "5. Callback codec and Consumption_Metric": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785535763307
+      }
+    ],
+    "6. Keyboard builders": [
+      {
+        "executionId": "b6824845-8a14-4bdb-b2eb-00909e685566",
+        "chatSessionId": "sess_cf4cdce0-a764-482c-bcca-b6c036a83178",
+        "timestamp": 1785536818099
+      }
+    ],
+    "7. Message rendering": [
+      {
+        "executionId": "fee47d07-b1bc-4dd3-b657-b009d60c972d",
+        "chatSessionId": "sess_0402df10-e340-4370-8c54-aa88dd2cea5f",
+        "timestamp": 1785567716066
+      }
+    ],
+    "9. Card_Message lifecycle": [
+      {
+        "executionId": "ecebe792-4017-486e-abd0-b91148743103",
+        "chatSessionId": "sess_43b8d103-4eca-4666-99fe-86f082747a79",
+        "timestamp": 1785568072665
+      }
+    ],
+    "10. Submission service": [
+      {
+        "executionId": "dd268eab-0108-4112-b7d8-667ae65695d0",
+        "chatSessionId": "sess_d7ff52c5-379d-40c1-b78d-e5f62023b60c",
+        "timestamp": 1785568539296
+      }
+    ],
+    "13. Offline path in the guided flow": [
+      {
+        "executionId": "63747588-fa51-48bc-8251-e104149b944a",
+        "chatSessionId": "sess_d5a64193-dd8c-4b0c-9dc8-e2f3f38f69ab",
+        "timestamp": 1785576668088
+      }
+    ],
+    "15. Options and Latest menus": [
+      {
+        "executionId": "dcfc3bfa-5db8-4e74-b58e-18e803163697",
+        "chatSessionId": "sess_c29eda0e-f3eb-44d3-b5e3-a3b47f18e21c",
+        "timestamp": 1785668423317
+      },
+      {
+        "executionId": "dcfc3bfa-5db8-4e74-b58e-18e803163697",
+        "chatSessionId": "sess_c29eda0e-f3eb-44d3-b5e3-a3b47f18e21c",
+        "timestamp": 1785668993938
+      }
+    ],
+    "16. Backward compatibility and defect fixes": [
+      {
+        "executionId": "3026ae17-66c2-4448-a58a-8be94c31b1df",
+        "chatSessionId": "sess_a4793388-9032-41a1-b944-4d68117eef92",
+        "timestamp": 1785672031718
+      }
+    ],
+    "17. Application wiring": [
+      {
+        "executionId": "57aebbea-a72e-4a55-bcc4-8c628cb9f85e",
+        "chatSessionId": "sess_d31332e2-9759-4fc3-9a61-e4728f182df0",
+        "timestamp": 1785673533918
+      }
+    ]
+  }
+}

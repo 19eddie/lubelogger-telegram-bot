@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
-from bot.i18n import _cache, get_text
+import pytest
+
+from bot.flows.definitions import MenuAction
+from bot.i18n import (
+    MENU_LABEL_KEYS,
+    _cache,
+    available_locales,
+    clear_cache,
+    get_keys,
+    get_text,
+    menu_label_index,
+    resolve_menu_label,
+)
 
 
 class TestGetText:
@@ -131,3 +143,108 @@ class TestGetText:
         for key in required_keys:
             result = get_text(key, lang="it")
             assert result != key, f"Key '{key}' not found in Italian locale"
+
+
+class TestAvailableLocales:
+    """Tests for available_locales."""
+
+    def setup_method(self) -> None:
+        clear_cache()
+
+    def test_lists_the_shipped_locales_sorted(self) -> None:
+        locales = available_locales()
+        assert locales == tuple(sorted(locales))
+        assert "en" in locales
+        assert "it" in locales
+
+    def test_contains_no_duplicates_and_no_non_locale_files(self) -> None:
+        locales = available_locales()
+        assert len(locales) == len(set(locales))
+        assert "__init__" not in locales
+
+
+class TestGetKeys:
+    """Tests for get_keys."""
+
+    def setup_method(self) -> None:
+        clear_cache()
+
+    def test_returns_the_keys_of_the_requested_locale(self) -> None:
+        keys = get_keys("en")
+        assert "welcome" in keys
+        for key in MENU_LABEL_KEYS.values():
+            assert key in keys
+
+    def test_italian_exposes_the_menu_keys(self) -> None:
+        assert set(MENU_LABEL_KEYS.values()) <= get_keys("it")
+
+    def test_unknown_locale_falls_back_to_english_keys(self) -> None:
+        assert get_keys("xx") == get_keys("en")
+
+
+class TestMenuLabelIndex:
+    """Tests for menu_label_index."""
+
+    def setup_method(self) -> None:
+        clear_cache()
+
+    def test_maps_every_label_of_every_locale_to_its_action(self) -> None:
+        index = menu_label_index()
+        for lang in available_locales():
+            for action, key in MENU_LABEL_KEYS.items():
+                label = get_text(key, lang=lang)
+                assert index[label.strip().casefold()] is action
+
+    def test_labels_are_normalized_lowercase_and_trimmed(self) -> None:
+        for label in menu_label_index():
+            assert label == label.strip().casefold()
+
+    def test_is_cached_between_calls(self) -> None:
+        assert menu_label_index() is menu_label_index()
+
+    def test_clear_cache_rebuilds_the_index(self) -> None:
+        first = menu_label_index()
+        clear_cache()
+        second = menu_label_index()
+        assert first is not second
+        assert dict(first) == dict(second)
+
+    def test_is_read_only(self) -> None:
+        index = menu_label_index()
+        with pytest.raises(TypeError):
+            index["hack"] = MenuAction.FUEL  # type: ignore[index]
+
+
+class TestResolveMenuLabel:
+    """Tests for resolve_menu_label."""
+
+    def setup_method(self) -> None:
+        clear_cache()
+
+    def test_resolves_english_labels(self) -> None:
+        assert resolve_menu_label(get_text("menu_fuel", lang="en")) is MenuAction.FUEL
+        assert resolve_menu_label(get_text("menu_latest", lang="en")) is MenuAction.LATEST
+
+    def test_resolves_italian_labels(self) -> None:
+        assert resolve_menu_label(get_text("menu_service", lang="it")) is MenuAction.SERVICE
+        assert resolve_menu_label(get_text("menu_options", lang="it")) is MenuAction.OPTIONS
+
+    def test_resolves_labels_of_every_locale_after_a_language_change(self) -> None:
+        # The allowlist is closed over all locales: a keyboard rendered in Italian keeps
+        # working once the user switched to English, and the other way round.
+        for lang in available_locales():
+            for action, key in MENU_LABEL_KEYS.items():
+                assert resolve_menu_label(get_text(key, lang=lang)) is action
+
+    def test_ignores_surrounding_whitespace_and_case(self) -> None:
+        label = get_text("menu_odometer", lang="en")
+        assert resolve_menu_label(f"  {label.upper()}  ") is MenuAction.ODOMETER
+
+    def test_returns_none_for_non_labels(self) -> None:
+        assert resolve_menu_label("42") is None
+        assert resolve_menu_label("/fuel") is None
+        assert resolve_menu_label("oil change <5000km") is None
+
+    def test_returns_none_for_blank_text(self) -> None:
+        assert resolve_menu_label("") is None
+        assert resolve_menu_label("   ") is None

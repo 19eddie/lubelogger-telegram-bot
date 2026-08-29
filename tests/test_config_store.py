@@ -1,106 +1,87 @@
-"""Property-based tests for ConfigStore persistence and isolation."""
+"""Property tests for ConfigStore persistence of the Active_Vehicle_Name."""
 
 from __future__ import annotations
 
-import os
+import asyncio
 import tempfile
+from pathlib import Path
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from bot.services.config_store import ConfigStore
 from bot.services.database import init_db
 
-# Shared database path and initialization for all hypothesis examples
-_DB_PATH = os.path.join(tempfile.gettempdir(), f"pbt_config_store_{os.getpid()}.db")
-_DB_INITIALIZED = False
-
-
-async def _get_store() -> ConfigStore:
-    """Get a ConfigStore backed by a shared test database (initialized once)."""
-    global _DB_INITIALIZED  # noqa: PLW0603
-    if not _DB_INITIALIZED:
-        if os.path.exists(_DB_PATH):
-            os.unlink(_DB_PATH)
-        await init_db(_DB_PATH)
-        _DB_INITIALIZED = True
-    return ConfigStore(_DB_PATH)
-
-
-@settings(max_examples=100)
-@given(
-    user_id=st.integers(min_value=1, max_value=2**31),
-    vehicle_id=st.integers(min_value=1, max_value=10000),
-    language=st.sampled_from(["en", "it", "de", "fr", "es"]),
+# Names LubeLogger can produce: plain text, markup characters, emoji, and the empty
+# string that means "never recorded".
+_vehicle_names = st.text(
+    alphabet=st.characters(blacklist_categories=("Cs",)),
+    min_size=0,
+    max_size=60,
 )
-@pytest.mark.asyncio
-async def test_property_config_persistence_roundtrip(
-    user_id: int,
-    vehicle_id: int,
-    language: str,
-) -> None:
-    """For any user ID, vehicle ID, and language code, storing them in the
-    ConfigStore and reading them back SHALL produce the same values.
-
-    # Feature: lubelogger-telegram-bot, Property 4: Config persistence round-trip
-
-    **Validates: Requirements 3.2, 3.4, 11.1, 11.2, 11.3, 11.4**
-    """
-    store = await _get_store()
-
-    # Store vehicle and language
-    await store.set_active_vehicle(user_id, vehicle_id)
-    await store.set_language(user_id, language)
-
-    # Read back and verify round-trip
-    read_vehicle = await store.get_active_vehicle(user_id)
-    read_language = await store.get_language(user_id)
-
-    assert read_vehicle == vehicle_id
-    assert read_language == language
 
 
-@settings(max_examples=100)
-@given(
-    data=st.data(),
-)
-@pytest.mark.asyncio
-async def test_property_multi_user_isolation(
-    data: st.DataObject,
-) -> None:
-    """For any two distinct user IDs with independently set preferences,
-    reading the config for one user SHALL return that user's values without
-    being affected by the other user's stored values.
-
-    # Feature: lubelogger-telegram-bot, Property 5: Multi-user config isolation
-
-    **Validates: Requirements 11.4**
-    """
-    user_id_1 = data.draw(st.integers(min_value=1, max_value=2**31), label="user_id_1")
-    user_id_2 = data.draw(
-        st.integers(min_value=1, max_value=2**31).filter(lambda x: x != user_id_1),
-        label="user_id_2",
+@st.composite
+def _vehicle_lists(draw: st.DrawFn) -> tuple[list[tuple[int, str]], int]:
+    """Draw a list of (vehicle_id, display_name) pairs plus the index of the chosen one."""
+    ids = draw(
+        st.lists(st.integers(min_value=1, max_value=10_000), min_size=1, max_size=8, unique=True)
     )
-    vehicle_id_1 = data.draw(st.integers(min_value=1, max_value=10000), label="vehicle_id_1")
-    vehicle_id_2 = data.draw(st.integers(min_value=1, max_value=10000), label="vehicle_id_2")
-    language_1 = data.draw(st.sampled_from(["en", "it", "de", "fr", "es"]), label="language_1")
-    language_2 = data.draw(st.sampled_from(["en", "it", "de", "fr", "es"]), label="language_2")
+    names = draw(st.lists(_vehicle_names, min_size=len(ids), max_size=len(ids)))
+    vehicles = list(zip(ids, names, strict=True))
+    chosen = draw(st.integers(min_value=0, max_value=len(vehicles) - 1))
+    return vehicles, chosen
 
-    store = await _get_store()
 
-    # Set preferences for user 1
-    await store.set_active_vehicle(user_id_1, vehicle_id_1)
-    await store.set_language(user_id_1, language_1)
+async def _roundtrip(
+    vehicles: list[tuple[int, str]], chosen: int, user_id: int
+) -> tuple[int | None, str | None, int | None, str | None]:
+    """Persist the chosen vehicle in a fresh database and read it back twice.
 
-    # Set preferences for user 2
-    await store.set_active_vehicle(user_id_2, vehicle_id_2)
-    await store.set_language(user_id_2, language_2)
+    The second read goes through a brand-new ConfigStore over the same file,
+    which stands in for reopening the database.
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        db_path = str(Path(tmp_dir) / "config.db")
+        await init_db(db_path)
+        store = ConfigStore(db_path)
 
-    # Read user 1 — should be unaffected by user 2
-    assert await store.get_active_vehicle(user_id_1) == vehicle_id_1
-    assert await store.get_language(user_id_1) == language_1
+        vehicle_id, name = vehicles[chosen]
+        await store.set_active_vehicle(user_id, vehicle_id, name)
 
-    # Read user 2 — should be unaffected by user 1
-    assert await store.get_active_vehicle(user_id_2) == vehicle_id_2
-    assert await store.get_language(user_id_2) == language_2
+        first_id = await store.get_active_vehicle(user_id)
+        first_name = await store.get_active_vehicle_name(user_id)
+
+        reopened = ConfigStore(db_path)
+        return (
+            first_id,
+            first_name,
+            await reopened.get_active_vehicle(user_id),
+            await reopened.get_active_vehicle_name(user_id),
+        )
+
+
+@settings(max_examples=100, deadline=None)
+@given(vehicles_and_choice=_vehicle_lists(), user_id=st.integers(min_value=1, max_value=10**12))
+def test_property_vehicle_name_roundtrip(
+    vehicles_and_choice: tuple[list[tuple[int, str]], int], user_id: int
+) -> None:
+    """# Feature: improve-ux, Property 33: The active vehicle name round-trips through persistence
+
+    For any vehicle list and any vehicle chosen from it, persisting the selection stores both the
+    identifier and the display name, and reading them back returns the display name of that
+    vehicle, including after the database is reopened.
+
+    Validates: Requirements 5.13, 8.6
+    """
+    vehicles, chosen = vehicles_and_choice
+    expected_id, expected_name = vehicles[chosen]
+
+    first_id, first_name, reopened_id, reopened_name = asyncio.run(
+        _roundtrip(vehicles, chosen, user_id)
+    )
+
+    assert first_id == expected_id
+    assert first_name == expected_name
+    assert reopened_id == expected_id
+    assert reopened_name == expected_name
