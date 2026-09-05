@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from pydantic import ValidationError
@@ -28,6 +28,33 @@ class TestGasRecordModel:
     def test_custom_date(self) -> None:
         record = GasRecordModel(odometer=100, liters=10.0, cost=20.0, date="2024-01-15")
         assert record.date == "2024-01-15"
+
+    def test_custom_date_and_missed_flag(self) -> None:
+        record = GasRecordModel(
+            odometer=100,
+            liters=10.0,
+            cost=20.0,
+            date="2024-01-15",
+            missed_fuel_up=True,
+        )
+        assert record.date == "2024-01-15"
+        assert record.missed_fuel_up is True
+
+    def test_rejects_invalid_date_format(self) -> None:
+        with pytest.raises(ValidationError) as exc_info:
+            GasRecordModel(odometer=100, liters=10.0, cost=20.0, date="15-01-2024")
+        assert "date" in str(exc_info.value)
+
+    def test_rejects_future_date(self) -> None:
+        future_date = date.today() + timedelta(days=1)
+        with pytest.raises(ValidationError) as exc_info:
+            GasRecordModel(
+                odometer=100,
+                liters=10.0,
+                cost=20.0,
+                date=future_date.isoformat(),
+            )
+        assert "date" in str(exc_info.value)
 
     def test_rejects_zero_odometer(self) -> None:
         with pytest.raises(ValidationError) as exc_info:

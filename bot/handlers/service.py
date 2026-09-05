@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import logging
+import math
 import re
 
 from pydantic import ValidationError
@@ -15,7 +15,7 @@ from telegram.ext import (
     filters,
 )
 
-from bot.exceptions import LubeLoggerUnreachableError, ParseError
+from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError, ParseError
 from bot.i18n import get_text
 from bot.models.payloads import ServiceRecordPayload
 from bot.models.validators import ServiceRecordModel
@@ -24,43 +24,32 @@ from bot.services.config_store import ConfigStore
 from bot.services.lubelogger_client import LubeLoggerClient
 from bot.services.queue_service import QueueService
 
-logger = logging.getLogger(__name__)
-
 # Conversation states
 ODOMETER, DESCRIPTION, COST = range(3)
 
+_VEHICLE_OVERRIDE_RE = re.compile(r"--vehicle\s+([1-9]\d*)")
+
 
 def _extract_vehicle_override(args: str) -> tuple[str, int | None]:
-    """Extract --vehicle <id> option from args and return remaining args + vehicle_id.
-
-    Args:
-        args: Raw command arguments string.
-
-    Returns:
-        Tuple of (remaining_args, vehicle_id_or_None).
-    """
-    pattern = re.compile(r"--vehicle\s+(\d+)")
-    match = pattern.search(args)
+    """Extract --vehicle <id> and return remaining args plus vehicle ID."""
+    match = _VEHICLE_OVERRIDE_RE.search(args)
     if match:
         vehicle_id = int(match.group(1))
-        remaining = pattern.sub("", args).strip()
+        remaining = _VEHICLE_OVERRIDE_RE.sub("", args).strip()
         return remaining, vehicle_id
     return args, None
+
+
+def _clear_service_context(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Remove temporary service conversation values."""
+    for key in ("service_vehicle_id", "service_odometer", "service_description"):
+        context.user_data.pop(key, None)
 
 
 async def _get_vehicle_id(
     user_id: int, config_store: ConfigStore, override_id: int | None
 ) -> int | None:
-    """Resolve the vehicle ID from override or active vehicle config.
-
-    Args:
-        user_id: Telegram user ID.
-        config_store: The config store instance.
-        override_id: Optional vehicle ID override from --vehicle flag.
-
-    Returns:
-        The resolved vehicle ID, or None if no vehicle is set.
-    """
+    """Resolve the vehicle ID from override or active vehicle config."""
     if override_id is not None:
         return override_id
     return await config_store.get_active_vehicle(user_id)
@@ -73,19 +62,10 @@ async def _submit_service_record(
     vehicle_id: int,
     lang: str,
 ) -> None:
-    """Validate, submit to LubeLogger (or queue), and respond to user.
-
-    Args:
-        update: The Telegram update.
-        context: The callback context.
-        record: The validated service record model.
-        vehicle_id: The target vehicle ID.
-        lang: The user's language preference.
-    """
+    """Submit a validated service record or queue it when offline."""
     client: LubeLoggerClient = context.bot_data["lubelogger_client"]
     queue_service: QueueService = context.bot_data["queue_service"]
     user_id = update.effective_user.id
-
     payload = ServiceRecordPayload.from_validated(record)
 
     try:
@@ -107,41 +87,28 @@ async def _submit_service_record(
             payload=payload.model_dump_json(by_alias=True),
         )
         await update.message.reply_text(get_text("service_queued", lang))
+    except LubeLoggerApiError:
+        await update.message.reply_text(get_text("lubelogger_error", lang))
 
 
-async def service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
-    """Handle /service command — inline args or start conversation flow.
-
-    With args: parse → validate → submit → confirm or queue.
-    Without args: start conversation (odometer → description → cost).
-
-    Returns:
-        ConversationHandler state if starting conversation, None otherwise.
-    """
+async def service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle /service with inline args or start the guided conversation."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
 
     raw_args = update.message.text.partition(" ")[2].strip() if update.message.text else ""
-
-    # Extract --vehicle override
     remaining_args, vehicle_override = _extract_vehicle_override(raw_args)
-
-    # Resolve vehicle ID
     vehicle_id = await _get_vehicle_id(user_id, config_store, vehicle_override)
     if vehicle_id is None:
         await update.message.reply_text(get_text("no_vehicle", lang))
         return ConversationHandler.END
 
-    # Store vehicle_id in user_data for conversation use
-    context.user_data["service_vehicle_id"] = vehicle_id
-
-    # If no args, start conversation
     if not remaining_args:
+        context.user_data["service_vehicle_id"] = vehicle_id
         await update.message.reply_text(get_text("service_prompt_odometer", lang))
         return ODOMETER
 
-    # Inline args mode: parse → validate → submit
     try:
         service_input = CommandParser.parse_service(remaining_args)
     except ParseError:
@@ -155,8 +122,7 @@ async def service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             cost=service_input.cost,
         )
     except ValidationError as exc:
-        error_msg = _validation_error_to_message(exc, lang)
-        await update.message.reply_text(error_msg)
+        await update.message.reply_text(_validation_error_to_message(exc, lang))
         return ConversationHandler.END
 
     await _submit_service_record(update, context, record, vehicle_id, lang)
@@ -164,42 +130,29 @@ async def service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def service_odometer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Conversation step: receive odometer reading.
-
-    Returns:
-        Next conversation state (DESCRIPTION).
-    """
+    """Conversation step: receive a positive integer odometer reading."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
 
-    text = update.message.text.strip()
-    odometer = CommandParser.normalize_decimal(text)
-
-    # Validate odometer is a positive integer
     try:
-        value = int(float(odometer))
-        if value <= 0:
+        value = float(CommandParser.normalize_decimal(update.message.text.strip()))
+        if not math.isfinite(value) or value <= 0 or not value.is_integer():
             raise ValueError
     except (ValueError, TypeError):
         await update.message.reply_text(get_text("invalid_odometer", lang))
         return ODOMETER
 
-    context.user_data["service_odometer"] = str(value)
+    context.user_data["service_odometer"] = str(int(value))
     await update.message.reply_text(get_text("service_prompt_description", lang))
     return DESCRIPTION
 
 
 async def service_description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Conversation step: receive service description.
-
-    Returns:
-        Next conversation state (COST).
-    """
+    """Conversation step: receive service description."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
-
     text = update.message.text.strip()
 
     if not text:
@@ -212,71 +165,50 @@ async def service_description(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def service_cost(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Conversation step: receive cost and finalize record.
-
-    Returns:
-        ConversationHandler.END to end the conversation.
-    """
+    """Conversation step: receive cost and finalize the service record."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
 
-    text = update.message.text.strip()
-    cost = CommandParser.normalize_decimal(text)
-
-    # Validate cost is a non-negative number
     try:
-        cost_value = float(cost)
-        if cost_value < 0:
+        cost_value = float(CommandParser.normalize_decimal(update.message.text.strip()))
+        if not math.isfinite(cost_value) or cost_value < 0:
             raise ValueError
     except (ValueError, TypeError):
         await update.message.reply_text(get_text("invalid_cost", lang))
         return COST
 
-    # Build and validate the record
-    odometer = context.user_data["service_odometer"]
-    description = context.user_data["service_description"]
-    vehicle_id = context.user_data["service_vehicle_id"]
-
     try:
         record = ServiceRecordModel(
-            odometer=odometer,
-            description=description,
-            cost=cost,
+            odometer=context.user_data["service_odometer"],
+            description=context.user_data["service_description"],
+            cost=cost_value,
         )
     except ValidationError as exc:
-        error_msg = _validation_error_to_message(exc, lang)
-        await update.message.reply_text(error_msg)
+        await update.message.reply_text(_validation_error_to_message(exc, lang))
+        _clear_service_context(context)
         return ConversationHandler.END
 
-    await _submit_service_record(update, context, record, vehicle_id, lang)
+    vehicle_id: int = context.user_data["service_vehicle_id"]
+    try:
+        await _submit_service_record(update, context, record, vehicle_id, lang)
+    finally:
+        _clear_service_context(context)
     return ConversationHandler.END
 
 
 async def service_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /cancel during service conversation flow.
-
-    Returns:
-        ConversationHandler.END to end the conversation.
-    """
+    """Handle /cancel during service conversation flow."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
-
+    _clear_service_context(context)
     await update.message.reply_text(get_text("conversation_cancelled", lang))
     return ConversationHandler.END
 
 
 def _validation_error_to_message(exc: ValidationError, lang: str) -> str:
-    """Convert a Pydantic ValidationError to a user-friendly localized message.
-
-    Args:
-        exc: The Pydantic validation error.
-        lang: The user's language preference.
-
-    Returns:
-        A localized error message for the first failed field.
-    """
+    """Convert a Pydantic validation error to a localized user message."""
     for error in exc.errors():
         field = error["loc"][0] if error["loc"] else "unknown"
         if field == "odometer":
@@ -285,20 +217,13 @@ def _validation_error_to_message(exc: ValidationError, lang: str) -> str:
             return get_text("invalid_cost", lang)
         if field == "description":
             return get_text("invalid_description", lang)
-    return get_text("invalid_odometer", lang)
+    return get_text("unexpected_error", lang)
 
 
 def get_service_conversation_handler(
     auth_filter: filters.BaseFilter | None = None,
 ) -> ConversationHandler:
-    """Create and return the ConversationHandler for the /service command.
-
-    Args:
-        auth_filter: Optional filter to restrict entry to authorized users.
-
-    Returns:
-        A ConversationHandler that manages the service record conversation flow.
-    """
+    """Create and return the ConversationHandler for /service."""
     return ConversationHandler(
         entry_points=[CommandHandler("service", service_command, filters=auth_filter)],
         states={

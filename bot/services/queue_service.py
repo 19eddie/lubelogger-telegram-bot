@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from pydantic import ValidationError
+
 from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError
 from bot.models.payloads import (
     GasRecordPayload,
@@ -50,9 +52,7 @@ class QueueService:
         self._db_path = db_path
         self.max_retries = max_retries
 
-    async def enqueue(
-        self, user_id: int, vehicle_id: int, record_type: str, payload: str
-    ) -> int:
+    async def enqueue(self, user_id: int, vehicle_id: int, record_type: str, payload: str) -> int:
         """Add a record to the offline queue.
 
         Args:
@@ -83,7 +83,7 @@ class QueueService:
         """
         async with get_db(self._db_path) as db:
             cursor = await db.execute(
-                "SELECT * FROM queue WHERE status = 'pending' ORDER BY created_at ASC",
+                "SELECT * FROM queue WHERE status = 'pending' ORDER BY id ASC",
             )
             rows = await cursor.fetchall()
             return [
@@ -193,13 +193,15 @@ class QueueService:
                 logger.warning("LubeLogger unreachable during flush, stopping")
                 break
             except LubeLoggerApiError as exc:
-                logger.warning(
-                    "API error for queue item %d: %s", item.id, exc.message
-                )
+                logger.warning("API error for queue item %d: %s", item.id, exc.message)
                 new_count = await self.increment_retry(item.id)
                 if new_count >= self.max_retries:
                     await self.mark_failed(item.id)
                     failed_items.append(item)
+            except (ValidationError, ValueError) as exc:
+                logger.error("Invalid payload for queue item %d: %s", item.id, exc)
+                await self.mark_failed(item.id)
+                failed_items.append(item)
         sent, failed = len(sent_items), len(failed_items)
         return FlushResult(
             sent=sent,
@@ -232,4 +234,4 @@ class QueueService:
             record = OdometerRecordPayload.model_validate(payload_data)
             await client.add_odometer_record(item.vehicle_id, record)
         else:
-            logger.error("Unknown record type in queue: %s", item.record_type)
+            raise ValueError(f"Unknown record type in queue: {item.record_type}")

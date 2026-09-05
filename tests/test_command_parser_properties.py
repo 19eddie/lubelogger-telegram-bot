@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -158,3 +160,36 @@ def test_property_fuel_argument_parsing(
     assert float(result.odometer) == odometer
     assert float(result.liters) == liters
     assert float(result.cost) == cost
+
+
+@settings(max_examples=100)
+@given(
+    odometer=st.integers(min_value=1, max_value=999999),
+    liters=st.floats(min_value=0.1, max_value=200.0, allow_nan=False, allow_infinity=False),
+    event_date=st.dates(min_value=date(2000, 1, 1), max_value=date.today()),
+    cost=st.floats(min_value=0.0, max_value=500.0, allow_nan=False, allow_infinity=False),
+    missed=st.booleans(),
+)
+def test_property_command_parsing_roundtrip_fuel_metadata(
+    odometer: int,
+    liters: float,
+    event_date: date,
+    cost: float,
+    missed: bool,
+) -> None:
+    """Fuel metadata survives format → parse round-trip."""
+    liters = round(liters, 2)
+    cost = round(cost, 2)
+    original = FuelInput(
+        odometer=str(odometer),
+        liters=str(liters),
+        date=event_date.isoformat(),
+        cost=str(cost),
+        missed_fuel_up=missed,
+    )
+
+    parsed = CommandParser.parse_fuel(CommandParser.format_fuel(original))
+
+    assert parsed.date == original.date
+    assert parsed.missed_fuel_up is original.missed_fuel_up
+    assert float(parsed.liters) == float(original.liters)

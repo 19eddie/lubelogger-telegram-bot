@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -16,7 +18,7 @@ from bot.models.validators import GasRecordModel, OdometerRecordModel, ServiceRe
 
 # --- Strategies ---
 
-valid_date_st = st.dates().map(lambda d: d.isoformat())
+valid_date_st = st.dates(max_value=date.today()).map(lambda d: d.isoformat())
 positive_int_st = st.integers(min_value=1, max_value=10_000_000)
 positive_float_st = st.floats(
     min_value=0.01, max_value=1_000_000.0, allow_nan=False, allow_infinity=False
@@ -131,3 +133,31 @@ def test_property_payload_all_strings(
         assert isinstance(value, str), (
             f"Field '{key}' has type {type(value).__name__}, expected str"
         )
+
+
+def test_gas_payload_omits_soc_without_user_data() -> None:
+    """Gas payload does not invent EV state-of-charge values."""
+    record = GasRecordModel(odometer=30, liters=30.0, cost=6.0, is_fill_to_full=False)
+
+    data = GasRecordPayload.from_validated(record).model_dump(by_alias=True)
+
+    assert "startingSoc" not in data
+    assert "endingSoc" not in data
+
+
+def test_gas_payload_serializes_date_and_missed_flag() -> None:
+    """Gas payload preserves retroactive date and missed-fuel metadata aliases."""
+    record = GasRecordModel(
+        date="2024-01-15",
+        odometer=45000,
+        liters=42.5,
+        cost=78.9,
+        is_fill_to_full=True,
+        missed_fuel_up=True,
+    )
+
+    data = GasRecordPayload.from_validated(record).model_dump(by_alias=True)
+
+    assert data["date"] == "2024-01-15"
+    assert data["missedFuelUp"] == "true"
+    assert all(isinstance(value, str) for value in data.values())

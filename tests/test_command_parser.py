@@ -176,3 +176,55 @@ class TestRoundTrip:
         formatted = CommandParser.format_odometer(original)
         parsed = CommandParser.parse_odometer(formatted)
         assert parsed.odometer == original.odometer
+
+
+    def test_parsing_date_and_missed_options(self) -> None:
+        result = CommandParser.parse_fuel(
+            "45000 42,5 78,90 --date 2024-01-15 --missed"
+        )
+
+        assert result == FuelInput(
+            odometer="45000",
+            liters="42.5",
+            cost="78.90",
+            date="2024-01-15",
+            missed_fuel_up=True,
+        )
+
+    def test_parsing_options_before_positional_values(self) -> None:
+        result = CommandParser.parse_fuel(
+            "--missed --date 2024-01-15 45000 42.5 78.90"
+        )
+
+        assert result.date == "2024-01-15"
+        assert result.missed_fuel_up is True
+
+    def test_missing_date_option_value(self) -> None:
+        with pytest.raises(ParseError):
+            CommandParser.parse_fuel("45000 42.5 78.90 --date")
+
+    def test_duplicate_options_are_rejected(self) -> None:
+        with pytest.raises(ParseError):
+            CommandParser.parse_fuel("45000 42.5 78.90 --missed --missed")
+        with pytest.raises(ParseError):
+            CommandParser.parse_fuel(
+                "45000 42.5 78.90 --date 2024-01-15 --date 2024-01-16"
+            )
+
+    def test_unknown_option_is_rejected(self) -> None:
+        with pytest.raises(ParseError):
+            CommandParser.parse_fuel("45000 42.5 78.90 --unknown")
+
+    def test_format_includes_optional_fuel_metadata(self) -> None:
+        record = FuelInput(
+            odometer="45000",
+            liters="42.5",
+            cost="78.9",
+            date="2024-01-15",
+            missed_fuel_up=True,
+        )
+
+        formatted = CommandParser.format_fuel(record)
+
+        assert formatted == "45000 42.5 78.9 --date 2024-01-15 --missed"
+        assert CommandParser.parse_fuel(formatted) == record

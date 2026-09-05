@@ -5,10 +5,39 @@ Tests that /fuel, /service, and /km without args start their respective conversa
 
 from __future__ import annotations
 
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
-from bot.handlers.fuel import ODOMETER as FUEL_ODOMETER
-from bot.handlers.fuel import fuel_command
+from telegram.ext import CallbackQueryHandler
+
+from bot.handlers.fuel import (
+    DATE as FUEL_DATE,
+)
+from bot.handlers.fuel import (
+    FUEL_DATE_TODAY_CALLBACK,
+    FUEL_FULL_TANK_NO_CALLBACK,
+    FUEL_FULL_TANK_YES_CALLBACK,
+    FUEL_MISSED_NO_CALLBACK,
+    FUEL_MISSED_YES_CALLBACK,
+    fuel_command,
+    fuel_cost_step,
+    fuel_date_step,
+    fuel_full_tank_callback,
+    fuel_full_tank_step,
+    fuel_missed_fuel_up_callback,
+    fuel_missed_fuel_up_step,
+    fuel_today_date_step,
+    get_fuel_conversation_handler,
+)
+from bot.handlers.fuel import (
+    FULL_TANK as FUEL_FULL_TANK,
+)
+from bot.handlers.fuel import (
+    MISSED_FUEL_UP as FUEL_MISSED_FUEL_UP,
+)
+from bot.handlers.fuel import (
+    ODOMETER as FUEL_ODOMETER,
+)
 from bot.handlers.odometer import ODOMETER as KM_ODOMETER
 from bot.handlers.odometer import km_command
 from bot.handlers.service import ODOMETER as SERVICE_ODOMETER
@@ -56,12 +85,12 @@ class TestFuelConversationInitiation:
     """Tests for /fuel command conversation flow initiation (Requirement 4.1)."""
 
     async def test_fuel_without_args_starts_conversation(self) -> None:
-        """/fuel without args should return ODOMETER state to start conversation."""
+        """/fuel without args should return DATE state to start conversation."""
         update, context = _make_update_and_context(text="/fuel", args=[])
 
         result = await fuel_command(update, context)
 
-        assert result == FUEL_ODOMETER
+        assert result == FUEL_DATE
         # Verify a prompt message was sent
         update.message.reply_text.assert_called_once()
 
@@ -74,6 +103,17 @@ class TestFuelConversationInitiation:
         msg = update.message.reply_text.call_args[0][0]
         # Should contain a prompt for odometer
         assert msg  # Non-empty response
+
+    async def test_fuel_without_args_shows_today_button(self) -> None:
+        """The guided date prompt should expose a one-tap today shortcut."""
+        update, context = _make_update_and_context(text="/fuel", args=[])
+
+        await fuel_command(update, context)
+
+        reply_markup = update.message.reply_text.call_args.kwargs["reply_markup"]
+        button = reply_markup.inline_keyboard[0][0]
+        assert button.callback_data == FUEL_DATE_TODAY_CALLBACK
+        assert button.text == "📅 Today"
 
     async def test_fuel_without_args_stores_vehicle_id(self) -> None:
         """/fuel without args should store the vehicle_id in user_data."""
@@ -95,6 +135,15 @@ class TestFuelConversationInitiation:
         assert result == ConversationHandler.END
         msg = update.message.reply_text.call_args[0][0]
         assert "/vehicle" in msg
+
+    def test_today_callback_is_registered_in_date_state(self) -> None:
+        """DATE state should route the today button through a callback handler."""
+        conversation_handler = get_fuel_conversation_handler()
+
+        assert any(
+            isinstance(handler, CallbackQueryHandler)
+            for handler in conversation_handler.states[FUEL_DATE]
+        )
 
 
 class TestServiceConversationInitiation:
@@ -160,3 +209,163 @@ class TestOdometerConversationInitiation:
 
         msg = update.message.reply_text.call_args[0][0]
         assert msg  # Non-empty response
+
+
+class TestFuelMetadataConversation:
+    """Tests for fuel date and missed-fuel guided steps."""
+
+    async def test_today_button_sets_today_and_advances(self) -> None:
+        """The today callback should store today's date and continue to odometer."""
+        update, context = _make_update_and_context()
+        update.callback_query = MagicMock()
+        update.callback_query.answer = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock()
+
+        result = await fuel_today_date_step(update, context)
+
+        assert result == FUEL_ODOMETER
+        assert context.user_data["fuel_date"] == date.today().isoformat()
+        update.callback_query.answer.assert_awaited_once_with()
+        update.callback_query.edit_message_text.assert_awaited_once()
+
+    async def test_date_step_accepts_past_date(self) -> None:
+        update, context = _make_update_and_context()
+        update.message.text = "2024-01-15"
+
+        result = await fuel_date_step(update, context)
+
+        assert result == FUEL_ODOMETER
+        assert context.user_data["fuel_date"] == "2024-01-15"
+
+    async def test_date_step_rejects_future_date(self) -> None:
+        update, context = _make_update_and_context()
+        update.message.text = "2999-01-15"
+
+        result = await fuel_date_step(update, context)
+
+        assert result == FUEL_DATE
+        assert "future" in update.message.reply_text.call_args[0][0].lower()
+
+    async def test_full_tank_step_asks_for_missed_flag(self) -> None:
+        update, context = _make_update_and_context()
+        update.message.text = "no"
+
+        result = await fuel_full_tank_step(update, context)
+
+        assert result == FUEL_MISSED_FUEL_UP
+        assert context.user_data["fuel_is_fill_to_full"] is False
+        assert "miss" in update.message.reply_text.call_args[0][0].lower()
+
+    async def test_missed_step_submits_metadata_and_clears_context(self) -> None:
+        update, context = _make_update_and_context()
+        update.message.text = "yes"
+        context.user_data.update(
+            {
+                "fuel_vehicle_id": 1,
+                "fuel_date": "2024-01-15",
+                "fuel_odometer": 45000,
+                "fuel_liters": 42.5,
+                "fuel_cost": 78.9,
+                "fuel_is_fill_to_full": False,
+            }
+        )
+
+        from telegram.ext import ConversationHandler
+
+        result = await fuel_missed_fuel_up_step(update, context)
+
+        assert result == ConversationHandler.END
+        context.bot_data["lubelogger_client"].add_gas_record.assert_awaited_once()
+        payload = context.bot_data["lubelogger_client"].add_gas_record.call_args[0][1]
+        assert payload.date == "2024-01-15"
+        assert payload.is_fill_to_full == "false"
+        assert payload.missed_fuel_up == "true"
+        assert context.user_data == {}
+
+
+def _make_callback_update_and_context(
+    data: str,
+) -> tuple[MagicMock, MagicMock]:
+    """Create mocks for a fuel inline-button callback update."""
+    update, context = _make_update_and_context()
+    callback_message = MagicMock()
+    callback_message.reply_text = AsyncMock()
+
+    update.message = None
+    update.callback_query = MagicMock()
+    update.callback_query.data = data
+    update.callback_query.message = callback_message
+    update.callback_query.answer = AsyncMock()
+    update.callback_query.edit_message_text = AsyncMock()
+    return update, context
+
+
+class TestFuelInlineBooleanCallbacks:
+    """Tests for localized yes/no inline buttons in the guided fuel flow."""
+
+    async def test_cost_step_shows_full_tank_buttons(self) -> None:
+        update, context = _make_update_and_context()
+        update.message.text = "78.90"
+
+        result = await fuel_cost_step(update, context)
+
+        assert result == FUEL_FULL_TANK
+        markup = update.message.reply_text.call_args.kwargs["reply_markup"]
+        buttons = markup.inline_keyboard[0]
+        assert [button.callback_data for button in buttons] == [
+            FUEL_FULL_TANK_YES_CALLBACK,
+            FUEL_FULL_TANK_NO_CALLBACK,
+        ]
+
+    async def test_full_tank_callback_stores_value_and_shows_missed_buttons(self) -> None:
+        update, context = _make_callback_update_and_context(FUEL_FULL_TANK_YES_CALLBACK)
+
+        result = await fuel_full_tank_callback(update, context)
+
+        assert result == FUEL_MISSED_FUEL_UP
+        assert context.user_data["fuel_is_fill_to_full"] is True
+        update.callback_query.answer.assert_awaited_once_with()
+        call_kwargs = update.callback_query.edit_message_text.call_args.kwargs
+        markup = call_kwargs["reply_markup"]
+        buttons = markup.inline_keyboard[0]
+        assert [button.callback_data for button in buttons] == [
+            FUEL_MISSED_YES_CALLBACK,
+            FUEL_MISSED_NO_CALLBACK,
+        ]
+
+    async def test_missed_callback_submits_record_and_clears_context(self) -> None:
+        update, context = _make_callback_update_and_context(FUEL_MISSED_NO_CALLBACK)
+        context.user_data.update(
+            {
+                "fuel_vehicle_id": 1,
+                "fuel_date": "2024-01-15",
+                "fuel_odometer": 45000,
+                "fuel_liters": 42.5,
+                "fuel_cost": 78.9,
+                "fuel_is_fill_to_full": True,
+            }
+        )
+
+        from telegram.ext import ConversationHandler
+
+        result = await fuel_missed_fuel_up_callback(update, context)
+
+        assert result == ConversationHandler.END
+        update.callback_query.answer.assert_awaited_once_with()
+        context.bot_data["lubelogger_client"].add_gas_record.assert_awaited_once()
+        payload = context.bot_data["lubelogger_client"].add_gas_record.call_args[0][1]
+        assert payload.missed_fuel_up == "false"
+        update.callback_query.message.reply_text.assert_awaited_once()
+        assert context.user_data == {}
+
+    def test_boolean_callbacks_are_registered_in_fuel_states(self) -> None:
+        conversation_handler = get_fuel_conversation_handler()
+
+        assert any(
+            isinstance(handler, CallbackQueryHandler)
+            for handler in conversation_handler.states[FUEL_FULL_TANK]
+        )
+        assert any(
+            isinstance(handler, CallbackQueryHandler)
+            for handler in conversation_handler.states[FUEL_MISSED_FUEL_UP]
+        )

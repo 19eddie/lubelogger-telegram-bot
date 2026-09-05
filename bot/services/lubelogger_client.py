@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 import httpx
 
@@ -16,6 +17,50 @@ from bot.models.responses import ApiResponse, Vehicle
 
 logger = logging.getLogger(__name__)
 
+_MAX_ERROR_BODY_LENGTH = 2_000
+_PRIVATE_TEXT_FIELDS = frozenset({"description", "notes", "tags"})
+_SENSITIVE_KEYS = frozenset(
+    {"api_key", "apikey", "authorization", "password", "secret", "token", "x_api_key"}
+)
+_SENSITIVE_VALUE_RE = re.compile(
+    r'(?i)(["\']?(?:x-api-key|api[_-]?key|authorization|token|password|secret)'
+    r'["\']?\s*[:=]\s*["\']?)[^,"\'}\s]+'
+)
+
+
+def _is_sensitive_key(key: str) -> bool:
+    """Return whether a mapping key may contain a credential."""
+    normalized = key.lower().replace("-", "_")
+    return normalized in _SENSITIVE_KEYS
+
+
+def _sanitize_params(
+    params: dict[str, str | int] | None,
+) -> dict[str, str | int] | None:
+    """Redact credential-like query parameters before logging."""
+    if params is None:
+        return None
+    return {key: "[REDACTED]" if _is_sensitive_key(key) else value for key, value in params.items()}
+
+
+def _sanitize_payload(payload: dict[str, str] | None) -> dict[str, str] | None:
+    """Keep diagnostic payload fields while omitting free-text and credential fields."""
+    if payload is None:
+        return None
+    return {
+        key: "[OMITTED]" if key.lower() in _PRIVATE_TEXT_FIELDS or _is_sensitive_key(key) else value
+        for key, value in payload.items()
+    }
+
+
+def _sanitize_response_body(body: str, api_key: str) -> str:
+    """Redact credentials and cap an API error body before logging or raising."""
+    sanitized = body.replace(api_key, "[REDACTED]") if api_key else body
+    sanitized = _SENSITIVE_VALUE_RE.sub(r"\1[REDACTED]", sanitized)
+    if len(sanitized) > _MAX_ERROR_BODY_LENGTH:
+        sanitized = sanitized[:_MAX_ERROR_BODY_LENGTH] + "...[truncated]"
+    return sanitized or "<empty>"
+
 
 class LubeLoggerClient:
     """Async HTTP client for LubeLogger API with shared connection pool."""
@@ -24,6 +69,7 @@ class LubeLoggerClient:
         headers: dict[str, str] = {}
         if api_key:
             headers["x-api-key"] = api_key
+        self._api_key = api_key
         self._client = httpx.AsyncClient(
             base_url=base_url,
             headers=headers,
@@ -48,19 +94,33 @@ class LubeLoggerClient:
             LubeLoggerUnreachableError: On connection or timeout errors.
             LubeLoggerApiError: On non-2xx responses.
         """
+        safe_params = _sanitize_params(params)
+        safe_payload = _sanitize_payload(json)
         try:
             response = await self._client.request(method, path, params=params, json=json)
-        except (httpx.ConnectError, httpx.TimeoutException) as exc:
-            logger.error("LubeLogger unreachable: %s", type(exc).__name__)
+        except httpx.RequestError as exc:
+            logger.error(
+                "LubeLogger unreachable: method=%s path=%s params=%s error=%s",
+                method,
+                path,
+                safe_params,
+                type(exc).__name__,
+            )
             raise LubeLoggerUnreachableError("Unable to connect to LubeLogger") from exc
 
         if not response.is_success:
+            error_body = _sanitize_response_body(response.text, self._api_key)
             logger.error(
-                "LubeLogger API error: status=%d path=%s",
+                "LubeLogger API error: status=%d method=%s path=%s params=%s "
+                "payload=%s response_body=%s",
                 response.status_code,
+                method,
                 path,
+                safe_params,
+                safe_payload,
+                error_body,
             )
-            raise LubeLoggerApiError(response.status_code, response.text)
+            raise LubeLoggerApiError(response.status_code, error_body)
 
         return response
 
