@@ -12,6 +12,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from bot.config import load_config
 from bot.exceptions import ConfigurationError
 from bot.handlers.fuel import get_fuel_conversation_handler
+from bot.handlers.help import help_command
 from bot.handlers.odometer import get_odometer_conversation_handler
 from bot.handlers.query import last_command, queue_command, status_command
 from bot.handlers.service import get_service_conversation_handler
@@ -152,6 +153,7 @@ def main() -> None:
     app.add_handler(get_fuel_conversation_handler(auth_filter=auth))
     app.add_handler(get_service_conversation_handler(auth_filter=auth))
     app.add_handler(get_odometer_conversation_handler(auth_filter=auth))
+    app.add_handler(CommandHandler("help", help_command, filters=auth))
 
     vehicle_cmd, vehicle_cb = get_vehicle_handlers(auth_filter=auth)
     app.add_handler(vehicle_cmd)

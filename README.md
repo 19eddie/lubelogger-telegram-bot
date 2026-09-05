@@ -32,6 +32,7 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 | Command | Description |
 |---------|-------------|
 | `/start` | Welcome message, prompts vehicle selection |
+| `/help` | Show available commands and usage |
 | `/vehicle` | Select active vehicle via inline keyboard |
 | `/fuel <odo> <liters> <cost> [options]` | Log a fuel fill-up; optional `--date YYYY-MM-DD` and `--missed` |
 | `/service <odo> "<desc>" <cost>` | Log a maintenance record |
@@ -101,8 +102,10 @@ bot/
 ├── config.py            # pydantic-settings config from env vars
 ├── exceptions.py        # Custom exception hierarchy
 ├── i18n.py              # Locale loader (JSON files, English fallback)
+├── command_catalog.py   # User-facing command metadata for generated help
 ├── handlers/            # Telegram command & conversation handlers
 │   ├── fuel.py
+│   ├── help.py
 │   ├── service.py
 │   ├── odometer.py
 │   ├── vehicle.py

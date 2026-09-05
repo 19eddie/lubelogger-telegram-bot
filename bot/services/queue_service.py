@@ -83,7 +83,7 @@ class QueueService:
         """
         async with get_db(self._db_path) as db:
             cursor = await db.execute(
-                "SELECT * FROM queue WHERE status = 'pending' ORDER BY created_at ASC",
+                "SELECT * FROM queue WHERE status = 'pending' ORDER BY id ASC",
             )
             rows = await cursor.fetchall()
             return [
