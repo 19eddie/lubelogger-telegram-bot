@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import date
 
 from pydantic import ValidationError
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     ConversationHandler,
@@ -18,17 +20,32 @@ from telegram.ext import (
 from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError, ParseError
 from bot.i18n import get_text
 from bot.models.payloads import GasRecordPayload
-from bot.models.validators import GasRecordModel
+from bot.models.validators import GasRecordModel, validate_fuel_date
 from bot.services.command_parser import CommandParser
 from bot.services.config_store import ConfigStore
 from bot.services.lubelogger_client import LubeLoggerClient
 from bot.services.queue_service import QueueService
 
 # Conversation states
-ODOMETER, LITERS, COST, FULL_TANK = range(4)
+DATE, ODOMETER, LITERS, COST, FULL_TANK, MISSED_FUEL_UP = range(6)
+FUEL_DATE_TODAY_CALLBACK = "fuel_date_today"
 
 
 _VEHICLE_OVERRIDE_RE = re.compile(r"--vehicle\s+([1-9]\d*)")
+
+
+def _fuel_date_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """Build the inline keyboard for selecting today's fuel date."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    get_text("fuel_today_button", lang),
+                    callback_data=FUEL_DATE_TODAY_CALLBACK,
+                )
+            ]
+        ]
+    )
 
 
 def _parse_vehicle_override(args_text: str) -> tuple[int | None, str]:
@@ -52,9 +69,26 @@ def _parse_positive_integer(value: str) -> int | None:
     return int(number)
 
 
+def _parse_yes_no(value: str) -> bool | None:
+    """Parse localized yes/no-style answers used by the guided fuel flow."""
+    response = value.strip().lower()
+    if response in {"yes", "y", "1", "true", "si", "sì", "s"}:
+        return True
+    if response in {"no", "n", "0", "false"}:
+        return False
+    return None
+
+
 def _clear_fuel_context(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove temporary fuel conversation values."""
-    for key in ("fuel_vehicle_id", "fuel_odometer", "fuel_liters", "fuel_cost"):
+    for key in (
+        "fuel_vehicle_id",
+        "fuel_date",
+        "fuel_odometer",
+        "fuel_liters",
+        "fuel_cost",
+        "fuel_is_fill_to_full",
+    ):
         context.user_data.pop(key, None)
 
 
@@ -62,6 +96,8 @@ def _map_validation_error(exc: ValidationError, lang: str) -> str:
     """Map a Pydantic validation error to a user-friendly i18n message."""
     for error in exc.errors():
         field = error["loc"][0] if error["loc"] else ""
+        if field == "date":
+            return get_text("invalid_date", lang)
         if field == "odometer":
             return get_text("invalid_odometer", lang)
         if field == "liters":
@@ -71,46 +107,15 @@ def _map_validation_error(exc: ValidationError, lang: str) -> str:
     return get_text("unexpected_error", lang)
 
 
-async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /fuel with inline args or start the guided conversation."""
-    config_store: ConfigStore = context.bot_data["config_store"]
-    user_id = update.effective_user.id
-    lang = await config_store.get_language(user_id)
-
-    args_text = " ".join(context.args) if context.args else ""
-    vehicle_override, args_text = _parse_vehicle_override(args_text)
-    vehicle_id = (
-        vehicle_override
-        if vehicle_override is not None
-        else await config_store.get_active_vehicle(user_id)
-    )
-    if vehicle_id is None:
-        await update.message.reply_text(get_text("no_vehicle", lang))
-        return ConversationHandler.END
-
-    if not args_text.strip():
-        context.user_data["fuel_vehicle_id"] = vehicle_id
-        await update.message.reply_text(get_text("fuel_ask_odometer", lang))
-        return ODOMETER
-
-    try:
-        fuel_input = CommandParser.parse_fuel(args_text)
-    except ParseError:
-        await update.message.reply_text(get_text("usage_fuel", lang))
-        return ConversationHandler.END
-
-    try:
-        record = GasRecordModel(
-            odometer=fuel_input.odometer,
-            liters=fuel_input.liters,
-            cost=fuel_input.cost,
-            is_fill_to_full=fuel_input.is_fill_to_full,
-            missed_fuel_up=fuel_input.missed_fuel_up,
-        )
-    except (ValidationError, ValueError):
-        await update.message.reply_text(get_text("usage_fuel", lang))
-        return ConversationHandler.END
-
+async def _submit_fuel_record(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    record: GasRecordModel,
+    vehicle_id: int,
+    user_id: int,
+    lang: str,
+) -> None:
+    """Submit a validated fuel record or enqueue it when LubeLogger is unreachable."""
     payload = GasRecordPayload.from_validated(record)
     client: LubeLoggerClient = context.bot_data["lubelogger_client"]
     try:
@@ -133,7 +138,86 @@ async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     except LubeLoggerApiError:
         await update.message.reply_text(get_text("lubelogger_error", lang))
 
+
+async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle /fuel with inline args or start the guided conversation."""
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+
+    args_text = " ".join(context.args) if context.args else ""
+    vehicle_override, args_text = _parse_vehicle_override(args_text)
+    vehicle_id = (
+        vehicle_override
+        if vehicle_override is not None
+        else await config_store.get_active_vehicle(user_id)
+    )
+    if vehicle_id is None:
+        await update.message.reply_text(get_text("no_vehicle", lang))
+        return ConversationHandler.END
+
+    if not args_text.strip():
+        context.user_data["fuel_vehicle_id"] = vehicle_id
+        await update.message.reply_text(
+            get_text("fuel_ask_date", lang),
+            reply_markup=_fuel_date_keyboard(lang),
+        )
+        return DATE
+
+    try:
+        fuel_input = CommandParser.parse_fuel(args_text)
+    except ParseError:
+        await update.message.reply_text(get_text("usage_fuel", lang))
+        return ConversationHandler.END
+
+    try:
+        record = GasRecordModel(
+            date=fuel_input.date or date.today().isoformat(),
+            odometer=fuel_input.odometer,
+            liters=fuel_input.liters,
+            cost=fuel_input.cost,
+            is_fill_to_full=fuel_input.is_fill_to_full,
+            missed_fuel_up=fuel_input.missed_fuel_up,
+        )
+    except ValidationError as exc:
+        await update.message.reply_text(_map_validation_error(exc, lang))
+        return ConversationHandler.END
+
+    await _submit_fuel_record(update, context, record, vehicle_id, user_id, lang)
     return ConversationHandler.END
+
+
+async def fuel_today_date_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Conversation step: accept today's date from the inline button."""
+    query = update.callback_query
+    await query.answer()
+
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+
+    context.user_data["fuel_date"] = date.today().isoformat()
+    await query.edit_message_text(get_text("fuel_ask_odometer", lang))
+    return ODOMETER
+
+
+async def fuel_date_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Conversation step: receive the fuel record date."""
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+    raw_value = update.message.text.strip()
+    value = date.today().isoformat() if raw_value.lower() in {"", "today", "oggi"} else raw_value
+
+    try:
+        validated_date = validate_fuel_date(value)
+    except ValueError:
+        await update.message.reply_text(get_text("invalid_date", lang))
+        return DATE
+
+    context.user_data["fuel_date"] = validated_date
+    await update.message.reply_text(get_text("fuel_ask_odometer", lang))
+    return ODOMETER
 
 
 async def fuel_odometer_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -191,55 +275,55 @@ async def fuel_cost_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def fuel_full_tank_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Conversation step: receive full-tank flag and submit record."""
+    """Conversation step: receive full-tank flag."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
 
-    response = update.message.text.strip().lower()
-    if response in {"yes", "y", "1", "true", "si", "sì", "s"}:
-        is_fill_to_full = True
-    elif response in {"no", "n", "0", "false"}:
-        is_fill_to_full = False
-    else:
+    is_fill_to_full = _parse_yes_no(update.message.text)
+    if is_fill_to_full is None:
         await update.message.reply_text(get_text("fuel_ask_full_tank", lang))
         return FULL_TANK
 
+    context.user_data["fuel_is_fill_to_full"] = is_fill_to_full
+    await update.message.reply_text(get_text("fuel_ask_missed", lang))
+    return MISSED_FUEL_UP
+
+
+async def fuel_missed_fuel_up_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Conversation step: receive missed-fuel flag and submit record."""
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+
+    missed_fuel_up = _parse_yes_no(update.message.text)
+    if missed_fuel_up is None:
+        await update.message.reply_text(get_text("fuel_ask_missed", lang))
+        return MISSED_FUEL_UP
+
     try:
         record = GasRecordModel(
+            date=context.user_data["fuel_date"],
             odometer=context.user_data["fuel_odometer"],
             liters=context.user_data["fuel_liters"],
             cost=context.user_data["fuel_cost"],
-            is_fill_to_full=is_fill_to_full,
-            missed_fuel_up=False,
+            is_fill_to_full=context.user_data["fuel_is_fill_to_full"],
+            missed_fuel_up=missed_fuel_up,
         )
     except ValidationError as exc:
         await update.message.reply_text(_map_validation_error(exc, lang))
         _clear_fuel_context(context)
         return ConversationHandler.END
 
-    payload = GasRecordPayload.from_validated(record)
-    vehicle_id: int = context.user_data["fuel_vehicle_id"]
-    client: LubeLoggerClient = context.bot_data["lubelogger_client"]
     try:
-        await client.add_gas_record(vehicle_id, payload)
-        await update.message.reply_text(
-            get_text(
-                "fuel_saved",
-                lang,
-                liters=str(record.liters),
-                cost=str(record.cost),
-                odometer=str(record.odometer),
-            )
+        await _submit_fuel_record(
+            update,
+            context,
+            record,
+            context.user_data["fuel_vehicle_id"],
+            user_id,
+            lang,
         )
-    except LubeLoggerUnreachableError:
-        queue_service: QueueService = context.bot_data["queue_service"]
-        await queue_service.enqueue(
-            user_id, vehicle_id, "gas", payload.model_dump_json(by_alias=True)
-        )
-        await update.message.reply_text(get_text("fuel_queued", lang))
-    except LubeLoggerApiError:
-        await update.message.reply_text(get_text("lubelogger_error", lang))
     finally:
         _clear_fuel_context(context)
 
@@ -263,10 +347,20 @@ def get_fuel_conversation_handler(
     return ConversationHandler(
         entry_points=[CommandHandler("fuel", fuel_command, filters=auth_filter)],
         states={
+            DATE: [
+                CallbackQueryHandler(
+                    fuel_today_date_step,
+                    pattern=f"^{FUEL_DATE_TODAY_CALLBACK}$",
+                ),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_date_step),
+            ],
             ODOMETER: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_odometer_step)],
             LITERS: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_liters_step)],
             COST: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_cost_step)],
             FULL_TANK: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_full_tank_step)],
+            MISSED_FUEL_UP: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_missed_fuel_up_step)
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel_command)],
         allow_reentry=True,

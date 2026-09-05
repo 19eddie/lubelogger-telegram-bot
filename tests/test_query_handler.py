@@ -49,6 +49,7 @@ class TestLastCommand:
                 "fuelConsumed": "42.5",
                 "cost": "78.90",
                 "odometer": "45000",
+                "missedFuelUp": "true",
             }
         )
 
@@ -60,8 +61,24 @@ class TestLastCommand:
         assert "78.90" in msg
         assert "45000" in msg
         assert "2024-01-15" in msg
+        assert "missed" in msg.lower()
 
-    async def test_last_fuel_empty(self) -> None:
+    async def test_last_fuel_without_missed_flag(self) -> None:
+        """Legacy fuel records without missed flag remain readable."""
+        update, context = _make_update_and_context(args=["fuel"])
+        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(
+            return_value={
+                "date": "2024-01-15",
+                "fuelConsumed": "42.5",
+                "cost": "78.90",
+                "odometer": "45000",
+            }
+        )
+
+        await last_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert "missed" not in msg.lower()
         """'/last fuel' with no records shows empty message."""
         update, context = _make_update_and_context(args=["fuel"])
         context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(

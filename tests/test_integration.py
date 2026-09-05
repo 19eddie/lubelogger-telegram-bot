@@ -7,6 +7,7 @@ Validates: Requirements 1.1, 4.9, 4.10, 8.1, 8.2, 8.4
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 from bot.exceptions import LubeLoggerUnreachableError
@@ -258,3 +259,79 @@ class TestUnauthorizedUser:
         assert 100 in auth_filter.user_ids
         assert 200 in auth_filter.user_ids
         assert 300 in auth_filter.user_ids
+
+
+class TestFuelMetadataIntegration:
+    """Test inline fuel metadata reaches payload and survives offline queue."""
+
+    async def test_inline_date_and_missed_flag_reach_payload(self, tmp_path: object) -> None:
+        db_path = str(tmp_path / "test.db")  # type: ignore[operator]
+        await init_db(db_path)
+
+        config_store = ConfigStore(db_path)
+        await config_store.set_active_vehicle(123, 1)
+        lubelogger_client = AsyncMock()
+        lubelogger_client.add_gas_record = AsyncMock(
+            return_value=MagicMock(success=True, message="Gas Record Added")
+        )
+        queue_service = QueueService(db_path)
+        update, context = _make_update_and_context(
+            text="/fuel 45000 42.5 78.90 --date 2024-01-15 --missed",
+            args=[
+                "45000",
+                "42.5",
+                "78.90",
+                "--date",
+                "2024-01-15",
+                "--missed",
+            ],
+            user_id=123,
+        )
+        context.bot_data = {
+            "config_store": config_store,
+            "lubelogger_client": lubelogger_client,
+            "queue_service": queue_service,
+        }
+
+        await fuel_command(update, context)
+
+        payload = lubelogger_client.add_gas_record.call_args[0][1]
+        assert payload.date == "2024-01-15"
+        assert payload.missed_fuel_up == "true"
+
+    async def test_offline_queue_preserves_date_and_missed_flag(self, tmp_path: object) -> None:
+        db_path = str(tmp_path / "test.db")  # type: ignore[operator]
+        await init_db(db_path)
+
+        config_store = ConfigStore(db_path)
+        await config_store.set_active_vehicle(123, 1)
+        lubelogger_client = AsyncMock()
+        lubelogger_client.add_gas_record = AsyncMock(
+            side_effect=LubeLoggerUnreachableError("Connection refused")
+        )
+        queue_service = QueueService(db_path)
+        update, context = _make_update_and_context(
+            text="/fuel 45000 42.5 78.90 --date 2024-01-15 --missed",
+            args=[
+                "45000",
+                "42.5",
+                "78.90",
+                "--date",
+                "2024-01-15",
+                "--missed",
+            ],
+            user_id=123,
+        )
+        context.bot_data = {
+            "config_store": config_store,
+            "lubelogger_client": lubelogger_client,
+            "queue_service": queue_service,
+        }
+
+        await fuel_command(update, context)
+
+        pending = await queue_service.get_pending()
+        assert len(pending) == 1
+        payload = json.loads(pending[0].payload)
+        assert payload["date"] == "2024-01-15"
+        assert payload["missedFuelUp"] == "true"

@@ -33,7 +33,7 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 |---------|-------------|
 | `/start` | Welcome message, prompts vehicle selection |
 | `/vehicle` | Select active vehicle via inline keyboard |
-| `/fuel <odo> <liters> <cost>` | Log a fuel fill-up |
+| `/fuel <odo> <liters> <cost> [options]` | Log a fuel fill-up; optional `--date YYYY-MM-DD` and `--missed` |
 | `/service <odo> "<desc>" <cost>` | Log a maintenance record |
 | `/km <odo>` | Log an odometer reading |
 | `/last fuel` | Show latest fuel record |
@@ -46,15 +46,17 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 ### Usage examples
 
 ```
-/fuel 45000 42.5 78.90       # Log 42.5L at €78.90, odometer 45000
-/fuel 45000 42,5 78,90       # Comma decimals work too
+/fuel 45000 42.5 78.90                         # Log today's fuel record
+/fuel 45000 42.5 78.90 --date 2026-08-25       # Log a past fuel record
+/fuel 45000 42.5 78.90 --date 2026-08-25 --missed # Mark previous fuel-up as missed
+/fuel 45000 42,5 78,90                         # Comma decimals work too
 /service 45100 "Oil change" 89.00
 /km 45200
 /last fuel
 /status
 ```
 
-All data-entry commands also work without arguments — the bot will guide you through a step-by-step conversation.
+All data-entry commands also work without arguments — the bot will guide you through a step-by-step conversation. During guided `/fuel`, tap the inline `📅 Today` button for the current date, or enter `YYYY-MM-DD` for a past date.
 
 ## Configuration
 

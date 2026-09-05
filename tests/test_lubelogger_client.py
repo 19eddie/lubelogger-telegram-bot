@@ -186,6 +186,7 @@ class TestAddGasRecord:
             assert call_args[0][0] == "POST"
             assert call_args[0][1] == "/api/vehicle/gasrecords/add"
             assert call_args[1]["params"] == {"vehicleId": 1}
+            assert call_args[1]["json"] == gas_payload.model_dump(by_alias=True)
 
 
 class TestAddServiceRecord:

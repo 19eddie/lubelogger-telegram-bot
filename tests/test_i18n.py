@@ -79,6 +79,7 @@ class TestGetText:
             "invalid_odometer",
             "invalid_liters",
             "invalid_cost",
+            "invalid_date",
             "invalid_description",
             "usage_fuel",
             "usage_service",
@@ -94,6 +95,10 @@ class TestGetText:
             "status_ok",
             "status_offline",
             "lang_changed",
+            "last_fuel_missed",
+            "fuel_ask_date",
+            "fuel_today_button",
+            "fuel_ask_missed",
         ]
         for key in required_keys:
             result = get_text(key, lang="en")
@@ -112,6 +117,7 @@ class TestGetText:
             "invalid_odometer",
             "invalid_liters",
             "invalid_cost",
+            "invalid_date",
             "invalid_description",
             "usage_fuel",
             "usage_service",
@@ -127,6 +133,10 @@ class TestGetText:
             "status_ok",
             "status_offline",
             "lang_changed",
+            "last_fuel_missed",
+            "fuel_ask_date",
+            "fuel_today_button",
+            "fuel_ask_missed",
         ]
         for key in required_keys:
             result = get_text(key, lang="it")

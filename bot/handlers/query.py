@@ -38,6 +38,10 @@ async def last_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if subcommand == "fuel":
             record = await client.get_latest_gas_record(vehicle_id)
             if record:
+                missed_value = record.get("missedFuelUp", False)
+                if isinstance(missed_value, str):
+                    missed_value = missed_value.strip().lower() == "true"
+                missed_text = get_text("last_fuel_missed", lang) if missed_value else ""
                 await update.message.reply_text(
                     get_text(
                         "last_fuel",
@@ -46,6 +50,7 @@ async def last_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                         liters=record.get("fuelConsumed", "N/A"),
                         cost=record.get("cost", "N/A"),
                         odometer=record.get("odometer", "N/A"),
+                        missed=missed_text,
                     )
                 )
             else:

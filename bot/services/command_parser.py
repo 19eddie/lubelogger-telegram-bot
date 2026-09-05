@@ -24,41 +24,75 @@ class CommandParser:
 
     @staticmethod
     def parse_fuel(args: str) -> FuelInput:
-        """Parse fuel command arguments: <odometer> <liters> <cost>.
+        """Parse fuel arguments with optional date and missed-fuel flags.
+
+        Accepted form: ``<odometer> <liters> <cost> [--date YYYY-MM-DD] [--missed]``.
+        Options may appear anywhere after splitting into tokens.
 
         Args:
-            args: Space-separated string with three numeric values.
+            args: Space-separated fuel command arguments.
 
         Returns:
-            FuelInput with normalized decimal values.
+            FuelInput with normalized decimal values and optional metadata.
 
         Raises:
             ParseError: If arguments don't match expected format.
         """
+        usage = "Usage: /fuel <odometer> <liters> <cost> [--date YYYY-MM-DD] [--missed]"
         parts = args.strip().split()
-        if len(parts) != 3:
-            raise ParseError(
-                command="/fuel",
-                hint="Usage: /fuel <odometer> <liters> <cost>",
-            )
+        positional: list[str] = []
+        fuel_date: str | None = None
+        missed_fuel_up = False
+        missed_seen = False
+        index = 0
 
-        odometer_raw, liters_raw, cost_raw = parts
+        while index < len(parts):
+            token = parts[index]
+            if token == "--date":
+                if fuel_date is not None or index + 1 >= len(parts):
+                    raise ParseError(command="/fuel", hint=usage)
+                next_token = parts[index + 1]
+                if next_token.startswith("--"):
+                    raise ParseError(command="/fuel", hint=usage)
+                fuel_date = next_token
+                index += 2
+            elif token == "--missed":
+                if missed_seen:
+                    raise ParseError(command="/fuel", hint=usage)
+                missed_seen = True
+                missed_fuel_up = True
+                index += 1
+            elif token.startswith("--"):
+                raise ParseError(command="/fuel", hint=usage)
+            else:
+                positional.append(token)
+                index += 1
 
+        if len(positional) != 3:
+            raise ParseError(command="/fuel", hint=usage)
+
+        odometer_raw, liters_raw, cost_raw = positional
         odometer = CommandParser.normalize_decimal(odometer_raw)
         liters = CommandParser.normalize_decimal(liters_raw)
         cost = CommandParser.normalize_decimal(cost_raw)
 
-        # Validate that all values are numeric
+        # Validate that all values are numeric.
         for label, value in [("odometer", odometer), ("liters", liters), ("cost", cost)]:
             try:
                 float(value)
             except ValueError:
                 raise ParseError(
                     command="/fuel",
-                    hint=f"Usage: /fuel <odometer> <liters> <cost> — '{label}' must be a number",
+                    hint=f"{usage} — '{label}' must be a number",
                 )
 
-        return FuelInput(odometer=odometer, liters=liters, cost=cost)
+        return FuelInput(
+            odometer=odometer,
+            liters=liters,
+            cost=cost,
+            date=fuel_date,
+            missed_fuel_up=missed_fuel_up,
+        )
 
     @staticmethod
     def parse_service(args: str) -> ServiceInput:
@@ -171,9 +205,14 @@ class CommandParser:
             record: The fuel input to format.
 
         Returns:
-            Space-separated string: "<odometer> <liters> <cost>"
+            Space-separated fuel arguments with optional metadata flags.
         """
-        return f"{record.odometer} {record.liters} {record.cost}"
+        parts = [record.odometer, record.liters, record.cost]
+        if record.date is not None:
+            parts.extend(["--date", record.date])
+        if record.missed_fuel_up:
+            parts.append("--missed")
+        return " ".join(parts)
 
     @staticmethod
     def format_service(record: ServiceInput) -> str:
