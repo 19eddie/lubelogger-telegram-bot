@@ -15,12 +15,22 @@ from bot.handlers.fuel import (
 )
 from bot.handlers.fuel import (
     FUEL_DATE_TODAY_CALLBACK,
+    FUEL_FULL_TANK_NO_CALLBACK,
+    FUEL_FULL_TANK_YES_CALLBACK,
+    FUEL_MISSED_NO_CALLBACK,
+    FUEL_MISSED_YES_CALLBACK,
     fuel_command,
+    fuel_cost_step,
     fuel_date_step,
+    fuel_full_tank_callback,
     fuel_full_tank_step,
+    fuel_missed_fuel_up_callback,
     fuel_missed_fuel_up_step,
     fuel_today_date_step,
     get_fuel_conversation_handler,
+)
+from bot.handlers.fuel import (
+    FULL_TANK as FUEL_FULL_TANK,
 )
 from bot.handlers.fuel import (
     MISSED_FUEL_UP as FUEL_MISSED_FUEL_UP,
@@ -271,3 +281,91 @@ class TestFuelMetadataConversation:
         assert payload.is_fill_to_full == "false"
         assert payload.missed_fuel_up == "true"
         assert context.user_data == {}
+
+
+def _make_callback_update_and_context(
+    data: str,
+) -> tuple[MagicMock, MagicMock]:
+    """Create mocks for a fuel inline-button callback update."""
+    update, context = _make_update_and_context()
+    callback_message = MagicMock()
+    callback_message.reply_text = AsyncMock()
+
+    update.message = None
+    update.callback_query = MagicMock()
+    update.callback_query.data = data
+    update.callback_query.message = callback_message
+    update.callback_query.answer = AsyncMock()
+    update.callback_query.edit_message_text = AsyncMock()
+    return update, context
+
+
+class TestFuelInlineBooleanCallbacks:
+    """Tests for localized yes/no inline buttons in the guided fuel flow."""
+
+    async def test_cost_step_shows_full_tank_buttons(self) -> None:
+        update, context = _make_update_and_context()
+        update.message.text = "78.90"
+
+        result = await fuel_cost_step(update, context)
+
+        assert result == FUEL_FULL_TANK
+        markup = update.message.reply_text.call_args.kwargs["reply_markup"]
+        buttons = markup.inline_keyboard[0]
+        assert [button.callback_data for button in buttons] == [
+            FUEL_FULL_TANK_YES_CALLBACK,
+            FUEL_FULL_TANK_NO_CALLBACK,
+        ]
+
+    async def test_full_tank_callback_stores_value_and_shows_missed_buttons(self) -> None:
+        update, context = _make_callback_update_and_context(FUEL_FULL_TANK_YES_CALLBACK)
+
+        result = await fuel_full_tank_callback(update, context)
+
+        assert result == FUEL_MISSED_FUEL_UP
+        assert context.user_data["fuel_is_fill_to_full"] is True
+        update.callback_query.answer.assert_awaited_once_with()
+        call_kwargs = update.callback_query.edit_message_text.call_args.kwargs
+        markup = call_kwargs["reply_markup"]
+        buttons = markup.inline_keyboard[0]
+        assert [button.callback_data for button in buttons] == [
+            FUEL_MISSED_YES_CALLBACK,
+            FUEL_MISSED_NO_CALLBACK,
+        ]
+
+    async def test_missed_callback_submits_record_and_clears_context(self) -> None:
+        update, context = _make_callback_update_and_context(FUEL_MISSED_NO_CALLBACK)
+        context.user_data.update(
+            {
+                "fuel_vehicle_id": 1,
+                "fuel_date": "2024-01-15",
+                "fuel_odometer": 45000,
+                "fuel_liters": 42.5,
+                "fuel_cost": 78.9,
+                "fuel_is_fill_to_full": True,
+            }
+        )
+
+        from telegram.ext import ConversationHandler
+
+        result = await fuel_missed_fuel_up_callback(update, context)
+
+        assert result == ConversationHandler.END
+        update.callback_query.answer.assert_awaited_once_with()
+        context.bot_data["lubelogger_client"].add_gas_record.assert_awaited_once()
+        payload = context.bot_data["lubelogger_client"].add_gas_record.call_args[0][1]
+        assert payload.missed_fuel_up == "false"
+        update.callback_query.message.reply_text.assert_awaited_once()
+        assert context.user_data == {}
+
+    def test_boolean_callbacks_are_registered_in_fuel_states(self) -> None:
+        conversation_handler = get_fuel_conversation_handler()
+
+        assert any(
+            isinstance(handler, CallbackQueryHandler)
+            for handler in conversation_handler.states[FUEL_FULL_TANK]
+        )
+        assert any(
+            isinstance(handler, CallbackQueryHandler)
+            for handler in conversation_handler.states[FUEL_MISSED_FUEL_UP]
+        )

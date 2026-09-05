@@ -65,8 +65,11 @@
   "fuel_ask_odometer": "Enter the odometer reading (km):",
   "fuel_ask_liters": "Enter the liters filled:",
   "fuel_ask_cost": "Enter the total cost (\u20ac):",
-  "fuel_ask_full_tank": "Was this a full tank fill-up? (yes/no)",
-  "fuel_ask_missed": "Did you miss the previous fuel-up? (yes/no)",
+  "fuel_ask_full_tank": "Was this a full tank fill-up? Choose below or reply yes/no:",
+  "fuel_ask_missed": "Did you miss the previous fuel-up? Choose below or reply yes/no:",
+  "fuel_yes_button": "✅ Yes",
+  "fuel_no_button": "❌ No",
+  "fuel_submitting": "⏳ Saving fuel record...",
   "service_prompt_odometer": "Enter the odometer reading (km):",
   "service_prompt_description": "Enter the service description:",
   "service_prompt_cost": "Enter the cost (\u20ac):"

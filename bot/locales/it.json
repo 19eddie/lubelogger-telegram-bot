@@ -65,8 +65,11 @@
   "fuel_ask_odometer": "Inserisci la lettura dell'odometro (km):",
   "fuel_ask_liters": "Inserisci i litri riforniti:",
   "fuel_ask_cost": "Inserisci il costo totale (\u20ac):",
-  "fuel_ask_full_tank": "Era un pieno completo? (si/no)",
-  "fuel_ask_missed": "Hai saltato il rifornimento precedente? (si/no)",
+  "fuel_ask_full_tank": "Era un pieno completo? Scegli sotto oppure rispondi sì/no:",
+  "fuel_ask_missed": "Hai saltato il rifornimento precedente? Scegli sotto oppure rispondi sì/no:",
+  "fuel_yes_button": "✅ Sì",
+  "fuel_no_button": "❌ No",
+  "fuel_submitting": "⏳ Salvataggio del rifornimento...",
   "service_prompt_odometer": "Inserisci la lettura dell'odometro (km):",
   "service_prompt_description": "Inserisci la descrizione dell'intervento:",
   "service_prompt_cost": "Inserisci il costo (\u20ac):"

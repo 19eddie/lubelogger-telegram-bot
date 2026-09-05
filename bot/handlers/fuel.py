@@ -7,7 +7,7 @@ import re
 from datetime import date
 
 from pydantic import ValidationError
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
 from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
@@ -29,6 +29,10 @@ from bot.services.queue_service import QueueService
 # Conversation states
 DATE, ODOMETER, LITERS, COST, FULL_TANK, MISSED_FUEL_UP = range(6)
 FUEL_DATE_TODAY_CALLBACK = "fuel_date_today"
+FUEL_FULL_TANK_YES_CALLBACK = "fuel_full_tank_yes"
+FUEL_FULL_TANK_NO_CALLBACK = "fuel_full_tank_no"
+FUEL_MISSED_YES_CALLBACK = "fuel_missed_yes"
+FUEL_MISSED_NO_CALLBACK = "fuel_missed_no"
 
 
 _VEHICLE_OVERRIDE_RE = re.compile(r"--vehicle\s+([1-9]\d*)")
@@ -43,6 +47,28 @@ def _fuel_date_keyboard(lang: str) -> InlineKeyboardMarkup:
                     get_text("fuel_today_button", lang),
                     callback_data=FUEL_DATE_TODAY_CALLBACK,
                 )
+            ]
+        ]
+    )
+
+
+def _fuel_boolean_keyboard(
+    lang: str,
+    yes_callback: str,
+    no_callback: str,
+) -> InlineKeyboardMarkup:
+    """Build a localized yes/no keyboard for a fuel metadata question."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    get_text("fuel_yes_button", lang),
+                    callback_data=yes_callback,
+                ),
+                InlineKeyboardButton(
+                    get_text("fuel_no_button", lang),
+                    callback_data=no_callback,
+                ),
             ]
         ]
     )
@@ -108,19 +134,19 @@ def _map_validation_error(exc: ValidationError, lang: str) -> str:
 
 
 async def _submit_fuel_record(
-    update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     record: GasRecordModel,
     vehicle_id: int,
     user_id: int,
     lang: str,
+    reply_message: Message,
 ) -> None:
     """Submit a validated fuel record or enqueue it when LubeLogger is unreachable."""
     payload = GasRecordPayload.from_validated(record)
     client: LubeLoggerClient = context.bot_data["lubelogger_client"]
     try:
         await client.add_gas_record(vehicle_id, payload)
-        await update.message.reply_text(
+        await reply_message.reply_text(
             get_text(
                 "fuel_saved",
                 lang,
@@ -134,9 +160,9 @@ async def _submit_fuel_record(
         await queue_service.enqueue(
             user_id, vehicle_id, "gas", payload.model_dump_json(by_alias=True)
         )
-        await update.message.reply_text(get_text("fuel_queued", lang))
+        await reply_message.reply_text(get_text("fuel_queued", lang))
     except LubeLoggerApiError:
-        await update.message.reply_text(get_text("lubelogger_error", lang))
+        await reply_message.reply_text(get_text("lubelogger_error", lang))
 
 
 async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -183,7 +209,14 @@ async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         await update.message.reply_text(_map_validation_error(exc, lang))
         return ConversationHandler.END
 
-    await _submit_fuel_record(update, context, record, vehicle_id, user_id, lang)
+    await _submit_fuel_record(
+        context,
+        record,
+        vehicle_id,
+        user_id,
+        lang,
+        reply_message=update.message,
+    )
     return ConversationHandler.END
 
 
@@ -270,37 +303,76 @@ async def fuel_cost_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return COST
 
     context.user_data["fuel_cost"] = value
-    await update.message.reply_text(get_text("fuel_ask_full_tank", lang))
+    await update.message.reply_text(
+        get_text("fuel_ask_full_tank", lang),
+        reply_markup=_fuel_boolean_keyboard(
+            lang,
+            FUEL_FULL_TANK_YES_CALLBACK,
+            FUEL_FULL_TANK_NO_CALLBACK,
+        ),
+    )
     return FULL_TANK
 
 
 async def fuel_full_tank_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Conversation step: receive full-tank flag."""
+    """Conversation step: receive full-tank flag as text fallback."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
 
     is_fill_to_full = _parse_yes_no(update.message.text)
     if is_fill_to_full is None:
-        await update.message.reply_text(get_text("fuel_ask_full_tank", lang))
+        await update.message.reply_text(
+            get_text("fuel_ask_full_tank", lang),
+            reply_markup=_fuel_boolean_keyboard(
+                lang,
+                FUEL_FULL_TANK_YES_CALLBACK,
+                FUEL_FULL_TANK_NO_CALLBACK,
+            ),
+        )
         return FULL_TANK
 
     context.user_data["fuel_is_fill_to_full"] = is_fill_to_full
-    await update.message.reply_text(get_text("fuel_ask_missed", lang))
+    await update.message.reply_text(
+        get_text("fuel_ask_missed", lang),
+        reply_markup=_fuel_boolean_keyboard(
+            lang,
+            FUEL_MISSED_YES_CALLBACK,
+            FUEL_MISSED_NO_CALLBACK,
+        ),
+    )
     return MISSED_FUEL_UP
 
 
-async def fuel_missed_fuel_up_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Conversation step: receive missed-fuel flag and submit record."""
+async def fuel_full_tank_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Conversation step: receive full-tank flag from an inline button."""
+    query = update.callback_query
+    await query.answer()
+
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
 
-    missed_fuel_up = _parse_yes_no(update.message.text)
-    if missed_fuel_up is None:
-        await update.message.reply_text(get_text("fuel_ask_missed", lang))
-        return MISSED_FUEL_UP
+    context.user_data["fuel_is_fill_to_full"] = query.data == FUEL_FULL_TANK_YES_CALLBACK
+    await query.edit_message_text(
+        get_text("fuel_ask_missed", lang),
+        reply_markup=_fuel_boolean_keyboard(
+            lang,
+            FUEL_MISSED_YES_CALLBACK,
+            FUEL_MISSED_NO_CALLBACK,
+        ),
+    )
+    return MISSED_FUEL_UP
 
+
+async def _finish_fuel_record(
+    context: ContextTypes.DEFAULT_TYPE,
+    user_id: int,
+    lang: str,
+    missed_fuel_up: bool,
+    reply_message: Message,
+) -> int:
+    """Build and submit guided fuel record after final metadata is available."""
     try:
         record = GasRecordModel(
             date=context.user_data["fuel_date"],
@@ -311,23 +383,78 @@ async def fuel_missed_fuel_up_step(update: Update, context: ContextTypes.DEFAULT
             missed_fuel_up=missed_fuel_up,
         )
     except ValidationError as exc:
-        await update.message.reply_text(_map_validation_error(exc, lang))
+        await reply_message.reply_text(_map_validation_error(exc, lang))
         _clear_fuel_context(context)
         return ConversationHandler.END
 
     try:
         await _submit_fuel_record(
-            update,
             context,
             record,
             context.user_data["fuel_vehicle_id"],
             user_id,
             lang,
+            reply_message=reply_message,
         )
     finally:
         _clear_fuel_context(context)
 
     return ConversationHandler.END
+
+
+async def fuel_missed_fuel_up_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Conversation step: receive missed-fuel flag as text fallback."""
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+
+    missed_fuel_up = _parse_yes_no(update.message.text)
+    if missed_fuel_up is None:
+        await update.message.reply_text(
+            get_text("fuel_ask_missed", lang),
+            reply_markup=_fuel_boolean_keyboard(
+                lang,
+                FUEL_MISSED_YES_CALLBACK,
+                FUEL_MISSED_NO_CALLBACK,
+            ),
+        )
+        return MISSED_FUEL_UP
+
+    return await _finish_fuel_record(
+        context,
+        user_id,
+        lang,
+        missed_fuel_up,
+        reply_message=update.message,
+    )
+
+
+async def fuel_missed_fuel_up_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> int:
+    """Conversation step: receive missed-fuel flag from an inline button."""
+    query = update.callback_query
+    await query.answer()
+
+    config_store: ConfigStore = context.bot_data["config_store"]
+    user_id = update.effective_user.id
+    lang = await config_store.get_language(user_id)
+    message = query.message
+
+    if message is None:
+        _clear_fuel_context(context)
+        return ConversationHandler.END
+
+    await query.edit_message_text(get_text("fuel_submitting", lang))
+    missed_fuel_up = query.data == FUEL_MISSED_YES_CALLBACK
+    return await _finish_fuel_record(
+        context,
+        user_id,
+        lang,
+        missed_fuel_up,
+        reply_message=message,
+    )
 
 
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -357,9 +484,19 @@ def get_fuel_conversation_handler(
             ODOMETER: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_odometer_step)],
             LITERS: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_liters_step)],
             COST: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_cost_step)],
-            FULL_TANK: [MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_full_tank_step)],
+            FULL_TANK: [
+                CallbackQueryHandler(
+                    fuel_full_tank_callback,
+                    pattern=(f"^({FUEL_FULL_TANK_YES_CALLBACK}|{FUEL_FULL_TANK_NO_CALLBACK})$"),
+                ),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_full_tank_step),
+            ],
             MISSED_FUEL_UP: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_missed_fuel_up_step)
+                CallbackQueryHandler(
+                    fuel_missed_fuel_up_callback,
+                    pattern=f"^({FUEL_MISSED_YES_CALLBACK}|{FUEL_MISSED_NO_CALLBACK})$",
+                ),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, fuel_missed_fuel_up_step),
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel_command)],

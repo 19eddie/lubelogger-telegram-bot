@@ -117,7 +117,14 @@ class TestGetText:
             "last_fuel_missed",
             "fuel_ask_date",
             "fuel_today_button",
+            "fuel_ask_odometer",
+            "fuel_ask_liters",
+            "fuel_ask_cost",
+            "fuel_ask_full_tank",
             "fuel_ask_missed",
+            "fuel_yes_button",
+            "fuel_no_button",
+            "fuel_submitting",
         ]
         for key in required_keys:
             result = get_text(key, lang="en")
@@ -174,7 +181,14 @@ class TestGetText:
             "last_fuel_missed",
             "fuel_ask_date",
             "fuel_today_button",
+            "fuel_ask_odometer",
+            "fuel_ask_liters",
+            "fuel_ask_cost",
+            "fuel_ask_full_tank",
             "fuel_ask_missed",
+            "fuel_yes_button",
+            "fuel_no_button",
+            "fuel_submitting",
         ]
         for key in required_keys:
             result = get_text(key, lang="it")
