@@ -8,7 +8,7 @@ A Telegram bot that lets you log fuel fill-ups, service records, and odometer re
 
 1. **Create a Telegram bot** via [@BotFather](https://t.me/BotFather) and grab your token.
 
-2. **(Recommended)** Enable authentication in LubeLogger ([guide](https://docs.lubelogger.com/Installation/Authentication/)) and create an API key with Editor scope ([API docs](https://docs.lubelogger.com/Advanced/API/)). If auth is disabled, skip this step.
+2. **(Recommended)** Enable authentication in LubeLogger ([guide](https://docs.lubelogger.com/Installation/Authentication/)). For current versions, create an API key with Editor scope ([API docs](https://docs.lubelogger.com/Advanced/API/)). For older LubeLogger, configure Basic Auth credentials instead: set `LUBELOGGER_USERNAME` and `LUBELOGGER_PASSWORD` in `.env`.
 
 3. **Get your Telegram user ID** — send `/start` to [@userinfobot](https://t.me/userinfobot).
 
@@ -16,7 +16,9 @@ A Telegram bot that lets you log fuel fill-ups, service records, and odometer re
    ```env
    TELEGRAM_BOT_TOKEN=your-token
    LUBELOGGER_URL=http://192.168.1.100:8080  # your LubeLogger address
-   LUBELOGGER_API_KEY=your-api-key  # omit if auth is disabled
+   LUBELOGGER_API_KEY=your-api-key  # current LubeLogger versions; omit if using Basic Auth
+   LUBELOGGER_USERNAME=your-username  # Basic Auth; leave empty otherwise
+   LUBELOGGER_PASSWORD=your-password  # Basic Auth; leave empty otherwise
    ALLOWED_USER_IDS=123456789
    ```
 
@@ -65,7 +67,9 @@ All data-entry commands also work without arguments — the bot will guide you t
 |----------|----------|---------|-------------|
 | `TELEGRAM_BOT_TOKEN` | Yes | — | Bot token from @BotFather |
 | `LUBELOGGER_URL` | Yes | — | LubeLogger base URL (e.g. `http://lubelogger:8080`) |
-| `LUBELOGGER_API_KEY` | No | — | API key from LubeLogger settings. Required only if authentication is enabled ([docs](https://docs.lubelogger.com/Advanced/API/)) |
+| `LUBELOGGER_API_KEY` | No | — | API key for modern LubeLogger versions. Do not use as v1.5.5 Basic Auth credential. ([docs](https://docs.lubelogger.com/Advanced/API/)) |
+| `LUBELOGGER_USERNAME` | No | — | Basic Auth username for older LubeLogger; must be paired with password |
+| `LUBELOGGER_PASSWORD` | No | — | Basic Auth password for older LubeLogger; must be paired with username |
 | `ALLOWED_USER_IDS` | Yes | — | Comma-separated Telegram user IDs |
 | `DB_PATH` | No | `/data/bot.db` | SQLite database file path |
 | `QUEUE_RETRY_INTERVAL` | No | `300` | Seconds between queue retry attempts |

@@ -31,3 +31,16 @@ class LubeLoggerApiError(BotError):
         self.status_code = status_code
         self.message = message
         super().__init__(f"LubeLogger API error {status_code}: {message}")
+
+    @property
+    def is_ambiguous(self) -> bool:
+        """Return whether the request may have been persisted despite its response."""
+        return self.status_code == 408 or self.status_code == 429 or self.status_code >= 500
+
+
+class LubeLoggerResponseError(BotError):
+    """Raised when a successful LubeLogger response has an invalid structure."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)

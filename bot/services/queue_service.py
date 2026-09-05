@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
@@ -10,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
-from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError
+from bot.exceptions import LubeLoggerApiError, LubeLoggerResponseError, LubeLoggerUnreachableError
 from bot.models.payloads import (
     GasRecordPayload,
     OdometerRecordPayload,
@@ -51,6 +52,7 @@ class QueueService:
     def __init__(self, db_path: str, max_retries: int = 3) -> None:
         self._db_path = db_path
         self.max_retries = max_retries
+        self._flush_lock = asyncio.Lock()
 
     async def enqueue(self, user_id: int, vehicle_id: int, record_type: str, payload: str) -> int:
         """Add a record to the offline queue.
@@ -167,24 +169,54 @@ class QueueService:
             rows = await cursor.fetchall()
             return {row["record_type"]: row["count"] for row in rows}
 
+    async def _is_already_synced(self, client: LubeLoggerClient, item: QueueItem) -> bool:
+        """Check whether a queued gas record already exists remotely."""
+        if item.record_type != "gas":
+            return False
+
+        payload_data = json.loads(item.payload)
+        payload = GasRecordPayload.model_validate(payload_data)
+        return await client.gas_record_exists(item.vehicle_id, payload)
+
     async def flush(self, client: LubeLoggerClient) -> FlushResult:
-        """Process all pending queue items in FIFO order.
+        """Flush pending records with one in-process worker at a time."""
+        async with self._flush_lock:
+            return await self._flush_locked(client)
 
-        Sends each item to LubeLogger. On success, marks as sent. On API error,
-        increments retry count and marks as failed if max retries reached.
-        Stops processing entirely if LubeLogger becomes unreachable.
-
-        Args:
-            client: The LubeLogger HTTP client to use for sending.
-
-        Returns:
-            A FlushResult with counts of sent, failed, and remaining items, plus
-            the items that were sent or permanently failed during this flush.
-        """
+    async def _flush_locked(self, client: LubeLoggerClient) -> FlushResult:
+        """Process pending records after acquiring the flush lock."""
         pending = await self.get_pending()
         sent_items: list[QueueItem] = []
         failed_items: list[QueueItem] = []
         for item in pending:
+            try:
+                if await self._is_already_synced(client, item):
+                    await self.mark_sent(item.id)
+                    sent_items.append(item)
+                    continue
+            except LubeLoggerUnreachableError:
+                logger.warning("LubeLogger unreachable during queue reconciliation, stopping")
+                break
+            except LubeLoggerApiError as exc:
+                logger.warning(
+                    "Could not reconcile queue item %d before retry: status=%d",
+                    item.id,
+                    exc.status_code,
+                )
+                continue
+            except LubeLoggerResponseError as exc:
+                logger.warning(
+                    "Could not reconcile queue item %d before retry: %s",
+                    item.id,
+                    exc.message,
+                )
+                continue
+            except (ValidationError, ValueError) as exc:
+                logger.error("Invalid queued payload for item %d: %s", item.id, exc)
+                await self.mark_failed(item.id)
+                failed_items.append(item)
+                continue
+
             try:
                 await self._send_item(client, item)
                 await self.mark_sent(item.id)
@@ -198,6 +230,12 @@ class QueueService:
                 if new_count >= self.max_retries:
                     await self.mark_failed(item.id)
                     failed_items.append(item)
+            except LubeLoggerResponseError as exc:
+                logger.warning(
+                    "Unknown response for queue item %d; leaving pending: %s",
+                    item.id,
+                    exc.message,
+                )
             except (ValidationError, ValueError) as exc:
                 logger.error("Invalid payload for queue item %d: %s", item.id, exc)
                 await self.mark_failed(item.id)

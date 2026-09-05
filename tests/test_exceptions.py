@@ -8,6 +8,7 @@ from bot.exceptions import (
     BotError,
     ConfigurationError,
     LubeLoggerApiError,
+    LubeLoggerResponseError,
     LubeLoggerUnreachableError,
     ParseError,
 )
@@ -31,6 +32,10 @@ class TestBotErrorHierarchy:
     def test_lubelogger_api_error_is_bot_error(self) -> None:
         with pytest.raises(BotError):
             raise LubeLoggerApiError(status_code=500, message="Internal Server Error")
+
+    def test_lubelogger_response_error_is_bot_error(self) -> None:
+        with pytest.raises(BotError):
+            raise LubeLoggerResponseError("invalid response")
 
 
 class TestParseError:
@@ -57,3 +62,10 @@ class TestLubeLoggerApiError:
     def test_message(self) -> None:
         err = LubeLoggerApiError(status_code=404, message="Vehicle not found")
         assert str(err) == "LubeLogger API error 404: Vehicle not found"
+
+    @pytest.mark.parametrize("status_code", [408, 429, 500, 502, 599])
+    def test_ambiguous_statuses_are_classified(self, status_code: int) -> None:
+        assert LubeLoggerApiError(status_code, "error").is_ambiguous is True
+
+    def test_validation_status_is_not_ambiguous(self) -> None:
+        assert LubeLoggerApiError(400, "invalid input").is_ambiguous is False

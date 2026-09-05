@@ -4,14 +4,21 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Mapping
 
 import httpx
+from pydantic import ValidationError
 
-from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError
+from bot.exceptions import (
+    LubeLoggerApiError,
+    LubeLoggerResponseError,
+    LubeLoggerUnreachableError,
+)
 from bot.models.payloads import (
     GasRecordPayload,
     OdometerRecordPayload,
     ServiceRecordPayload,
+    gas_payload_matches_record,
 )
 from bot.models.responses import ApiResponse, Vehicle
 
@@ -62,17 +69,60 @@ def _sanitize_response_body(body: str, api_key: str) -> str:
     return sanitized or "<empty>"
 
 
+def _decode_api_response(response: httpx.Response) -> ApiResponse:
+    """Decode a successful write response or classify it as unknown state."""
+    try:
+        data = response.json()
+        return ApiResponse.model_validate(data)
+    except (ValueError, TypeError, ValidationError) as exc:
+        logger.error("Invalid LubeLogger write response: error=%s", type(exc).__name__)
+        raise LubeLoggerResponseError("LubeLogger returned an invalid write response") from exc
+
+
+def _decode_record_list(response: httpx.Response, path: str) -> list[dict[str, object]]:
+    """Decode a list response and reject malformed remote data safely."""
+    try:
+        data = response.json()
+    except (ValueError, TypeError) as exc:
+        logger.error(
+            "Invalid LubeLogger record response: path=%s error=%s",
+            path,
+            type(exc).__name__,
+        )
+        raise LubeLoggerResponseError("LubeLogger returned invalid record data") from exc
+
+    if not isinstance(data, list) or any(not isinstance(record, Mapping) for record in data):
+        logger.error("Invalid LubeLogger record response shape: path=%s", path)
+        raise LubeLoggerResponseError("LubeLogger returned invalid record data")
+    return [dict(record) for record in data]
+
+
 class LubeLoggerClient:
     """Async HTTP client for LubeLogger API with shared connection pool."""
 
-    def __init__(self, base_url: str, api_key: str, timeout: int = 10) -> None:
-        headers: dict[str, str] = {}
-        if api_key:
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        timeout: int = 10,
+        *,
+        username: str = "",
+        password: str = "",
+    ) -> None:
+        if bool(username) != bool(password):
+            raise ValueError("username and password must be set together")
+
+        headers: dict[str, str] = {"culture-invariant": "true"}
+        auth: httpx.BasicAuth | None = None
+        if username and password:
+            auth = httpx.BasicAuth(username, password)
+        elif api_key:
             headers["x-api-key"] = api_key
         self._api_key = api_key
         self._client = httpx.AsyncClient(
             base_url=base_url,
             headers=headers,
+            auth=auth,
             timeout=timeout,
         )
 
@@ -140,7 +190,7 @@ class LubeLoggerClient:
             params={"vehicleId": vehicle_id},
             json=record.model_dump(by_alias=True),
         )
-        return ApiResponse.model_validate(response.json())
+        return _decode_api_response(response)
 
     async def add_service_record(
         self, vehicle_id: int, record: ServiceRecordPayload
@@ -160,7 +210,7 @@ class LubeLoggerClient:
             params={"vehicleId": vehicle_id},
             json=record.model_dump(by_alias=True),
         )
-        return ApiResponse.model_validate(response.json())
+        return _decode_api_response(response)
 
     async def add_odometer_record(
         self, vehicle_id: int, record: OdometerRecordPayload
@@ -180,7 +230,7 @@ class LubeLoggerClient:
             params={"vehicleId": vehicle_id},
             json=record.model_dump(by_alias=True),
         )
-        return ApiResponse.model_validate(response.json())
+        return _decode_api_response(response)
 
     async def get_vehicles(self) -> list[Vehicle]:
         """Fetch all vehicles from LubeLogger.
@@ -210,24 +260,21 @@ class LubeLoggerClient:
             return None
         return records[-1]
 
-    async def get_latest_gas_record(self, vehicle_id: int) -> dict[str, str] | None:
-        """Fetch the latest gas record for a vehicle.
+    async def get_gas_records(self, vehicle_id: int) -> list[dict[str, object]]:
+        """Fetch all gas records for a vehicle for reconciliation and display."""
+        path = "/api/vehicle/gasrecords"
+        response = await self._request("GET", path, params={"vehicleId": vehicle_id})
+        return _decode_record_list(response, path)
 
-        Args:
-            vehicle_id: The LubeLogger vehicle ID.
+    async def get_latest_gas_record(self, vehicle_id: int) -> dict[str, object] | None:
+        """Fetch the latest gas record for a vehicle."""
+        records = await self.get_gas_records(vehicle_id)
+        return records[-1] if records else None
 
-        Returns:
-            The latest gas record as a dict, or None if no records exist.
-        """
-        response = await self._request(
-            "GET",
-            "/api/vehicle/gasrecords",
-            params={"vehicleId": vehicle_id},
-        )
-        records = response.json()
-        if not records:
-            return None
-        return records[-1]
+    async def gas_record_exists(self, vehicle_id: int, payload: GasRecordPayload) -> bool:
+        """Check whether any remote gas record matches the payload fingerprint."""
+        records = await self.get_gas_records(vehicle_id)
+        return any(gas_payload_matches_record(payload, record) for record in records)
 
     async def health_check(self) -> bool:
         """Check if LubeLogger is reachable.

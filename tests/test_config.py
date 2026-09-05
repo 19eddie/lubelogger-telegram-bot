@@ -32,6 +32,8 @@ class TestBotConfig:
         assert config.telegram_bot_token == "123456:ABC-DEF"
         assert config.lubelogger_url == "http://lubelogger:8080"
         assert config.lubelogger_api_key == "test-key-123"
+        assert config.lubelogger_username == ""
+        assert config.lubelogger_password == ""
         assert config.allowed_user_ids == [111, 222, 333]
 
     def test_default_values(self) -> None:
@@ -63,14 +65,30 @@ class TestBotConfig:
             config = BotConfig()  # type: ignore[call-arg]
         assert config.allowed_user_ids == [42]
 
+    def test_basic_auth_credentials_are_supported(self) -> None:
+        env = self._env(LUBELOGGER_USERNAME="user", LUBELOGGER_PASSWORD="pass")
+        with patch.dict(os.environ, env, clear=True):
+            config = BotConfig()  # type: ignore[call-arg]
+        assert config.lubelogger_username == "user"
+        assert config.lubelogger_password == "pass"
+
+    def test_basic_auth_credentials_must_be_paired(self) -> None:
+        env = self._env(LUBELOGGER_USERNAME="user")
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(ValueError, match="must be set together"):
+                BotConfig()  # type: ignore[call-arg]
+
 
 class TestLoadConfig:
     """load_config() wraps BotConfig with ConfigurationError."""
 
     def test_raises_configuration_error_on_missing_vars(self) -> None:
-        with patch.dict(os.environ, {}, clear=True), patch(
-            "bot.config.BotConfig.model_config",
-            {**BotConfig.model_config, "env_file": None},
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch(
+                "bot.config.BotConfig.model_config",
+                {**BotConfig.model_config, "env_file": None},
+            ),
         ):
             with pytest.raises(ConfigurationError):
                 load_config()

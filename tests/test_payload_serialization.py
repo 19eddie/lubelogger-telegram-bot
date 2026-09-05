@@ -13,6 +13,7 @@ from bot.models.payloads import (
     GasRecordPayload,
     OdometerRecordPayload,
     ServiceRecordPayload,
+    gas_payload_matches_record,
 )
 from bot.models.validators import GasRecordModel, OdometerRecordModel, ServiceRecordModel
 
@@ -191,3 +192,29 @@ def test_lubelogger_decimal_formatter_avoids_float_artifacts() -> None:
     assert payloads[0].cost == "0,01"
     assert payloads[1].fuel_consumed == "0,0000001"
     assert payloads[1].cost == "100"
+
+
+def test_gas_payload_matches_remote_locale_formats() -> None:
+    """Fingerprint matching accepts server dot/comma formatting but rejects 1167."""
+    payload = GasRecordPayload(
+        date="2026-05-04",
+        odometer="295950",
+        fuel_consumed="11,67",
+        cost="18,66",
+        is_fill_to_full="true",
+        missed_fuel_up="false",
+    )
+    remote_record = {
+        "date": "2026-05-04",
+        "odometer": "295950",
+        "fuelConsumed": "11.67",
+        "cost": "18.66",
+        "isFillToFull": True,
+        "missedFuelUp": False,
+    }
+
+    assert gas_payload_matches_record(payload, remote_record)
+    assert not gas_payload_matches_record(
+        payload,
+        {**remote_record, "fuelConsumed": "1167"},
+    )

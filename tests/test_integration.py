@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock, MagicMock
 
-from bot.exceptions import LubeLoggerUnreachableError
+from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError
 from bot.handlers.fuel import fuel_command
 from bot.handlers.vehicle import vehicle_callback, vehicle_command
 from bot.middleware.auth import create_auth_filter
@@ -107,6 +107,7 @@ class TestOfflineQueueFlow:
         lubelogger_client.add_gas_record = AsyncMock(
             side_effect=LubeLoggerUnreachableError("Connection refused")
         )
+        lubelogger_client.gas_record_exists = AsyncMock(return_value=False)
 
         queue_service = QueueService(db_path)
 
@@ -143,6 +144,7 @@ class TestOfflineQueueFlow:
         flush_client.add_gas_record = AsyncMock(
             return_value=MagicMock(success=True, message="Gas Record Added")
         )
+        flush_client.gas_record_exists = AsyncMock(return_value=False)
 
         # Flush the queue
         flush_result = await queue_service.flush(flush_client)
@@ -309,6 +311,7 @@ class TestFuelMetadataIntegration:
         lubelogger_client.add_gas_record = AsyncMock(
             side_effect=LubeLoggerUnreachableError("Connection refused")
         )
+        lubelogger_client.gas_record_exists = AsyncMock(return_value=False)
         queue_service = QueueService(db_path)
         update, context = _make_update_and_context(
             text="/fuel 45000 42.5 78.90 --date 2024-01-15 --missed",
@@ -335,3 +338,77 @@ class TestFuelMetadataIntegration:
         payload = json.loads(pending[0].payload)
         assert payload["date"] == "2024-01-15"
         assert payload["missedFuelUp"] == "true"
+
+
+class TestAmbiguousFuelPost:
+    """Test reconciliation when POST response is lost after remote persistence."""
+
+    async def test_existing_record_is_not_queued_after_ambiguous_post(
+        self,
+        tmp_path: object,
+    ) -> None:
+        db_path = str(tmp_path / "test.db")  # type: ignore[operator]
+        await init_db(db_path)
+
+        config_store = ConfigStore(db_path)
+        await config_store.set_active_vehicle(123, 1)
+
+        lubelogger_client = AsyncMock()
+        lubelogger_client.add_gas_record = AsyncMock(
+            side_effect=LubeLoggerUnreachableError("response lost")
+        )
+        lubelogger_client.gas_record_exists = AsyncMock(return_value=True)
+        queue_service = QueueService(db_path)
+        update, context = _make_update_and_context(
+            text="/fuel 295950 11.67 18.66 --date 2026-05-04",
+            args=["295950", "11.67", "18.66", "--date", "2026-05-04"],
+            user_id=123,
+        )
+        context.bot_data = {
+            "config_store": config_store,
+            "lubelogger_client": lubelogger_client,
+            "queue_service": queue_service,
+        }
+
+        await fuel_command(update, context)
+
+        assert await queue_service.get_pending() == []
+        lubelogger_client.add_gas_record.assert_awaited_once()
+        lubelogger_client.gas_record_exists.assert_awaited_once()
+        message = update.message.reply_text.call_args[0][0]
+        assert "saved" in message.lower()
+
+    async def test_server_error_is_reconciled_and_queued_when_not_found(
+        self,
+        tmp_path: object,
+    ) -> None:
+        """An ambiguous 5xx must use reconciliation before queueing a retry."""
+        db_path = str(tmp_path / "test.db")  # type: ignore[operator]
+        await init_db(db_path)
+
+        config_store = ConfigStore(db_path)
+        await config_store.set_active_vehicle(123, 1)
+        lubelogger_client = AsyncMock()
+        lubelogger_client.add_gas_record = AsyncMock(
+            side_effect=LubeLoggerApiError(500, "server error")
+        )
+        lubelogger_client.gas_record_exists = AsyncMock(return_value=False)
+        queue_service = QueueService(db_path)
+        update, context = _make_update_and_context(
+            text="/fuel 295950 11.67 18.66 --date 2026-05-04",
+            args=["295950", "11.67", "18.66", "--date", "2026-05-04"],
+            user_id=123,
+        )
+        context.bot_data = {
+            "config_store": config_store,
+            "lubelogger_client": lubelogger_client,
+            "queue_service": queue_service,
+        }
+
+        await fuel_command(update, context)
+
+        pending = await queue_service.get_pending()
+        assert len(pending) == 1
+        lubelogger_client.gas_record_exists.assert_awaited_once()
+        message = update.message.reply_text.call_args[0][0]
+        assert "offline" in message.lower() or "sync" in message.lower()

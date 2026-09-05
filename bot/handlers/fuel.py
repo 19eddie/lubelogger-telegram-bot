@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 from datetime import date
@@ -17,7 +18,12 @@ from telegram.ext import (
     filters,
 )
 
-from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError, ParseError
+from bot.exceptions import (
+    LubeLoggerApiError,
+    LubeLoggerResponseError,
+    LubeLoggerUnreachableError,
+    ParseError,
+)
 from bot.i18n import get_text
 from bot.models.payloads import GasRecordPayload
 from bot.models.validators import GasRecordModel, validate_fuel_date
@@ -25,6 +31,8 @@ from bot.services.command_parser import CommandParser
 from bot.services.config_store import ConfigStore
 from bot.services.lubelogger_client import LubeLoggerClient
 from bot.services.queue_service import QueueService
+
+logger = logging.getLogger(__name__)
 
 # Conversation states
 DATE, ODOMETER, LITERS, COST, FULL_TANK, MISSED_FUEL_UP = range(6)
@@ -133,6 +141,50 @@ def _map_validation_error(exc: ValidationError, lang: str) -> str:
     return get_text("unexpected_error", lang)
 
 
+def _fuel_saved_message(record: GasRecordModel, lang: str) -> str:
+    """Build the confirmation message for a saved fuel record."""
+    return get_text(
+        "fuel_saved",
+        lang,
+        liters=str(record.liters),
+        cost=str(record.cost),
+        odometer=str(record.odometer),
+    )
+
+
+async def _queue_or_confirm_ambiguous_fuel(
+    context: ContextTypes.DEFAULT_TYPE,
+    record: GasRecordModel,
+    payload: GasRecordPayload,
+    vehicle_id: int,
+    user_id: int,
+    lang: str,
+    reply_message: Message,
+) -> None:
+    """Reconcile an uncertain write, then queue only when it remains unknown."""
+    client: LubeLoggerClient = context.bot_data["lubelogger_client"]
+    try:
+        if await client.gas_record_exists(vehicle_id, payload):
+            logger.info(
+                "Gas record already exists after ambiguous POST: vehicle_id=%d date=%s odometer=%s",
+                vehicle_id,
+                record.date,
+                record.odometer,
+            )
+            await reply_message.reply_text(_fuel_saved_message(record, lang))
+            return
+    except (LubeLoggerUnreachableError, LubeLoggerApiError, LubeLoggerResponseError) as exc:
+        logger.warning(
+            "Could not reconcile ambiguous gas POST for vehicle_id=%d: error=%s",
+            vehicle_id,
+            type(exc).__name__,
+        )
+
+    queue_service: QueueService = context.bot_data["queue_service"]
+    await queue_service.enqueue(user_id, vehicle_id, "gas", payload.model_dump_json(by_alias=True))
+    await reply_message.reply_text(get_text("fuel_queued", lang))
+
+
 async def _submit_fuel_record(
     context: ContextTypes.DEFAULT_TYPE,
     record: GasRecordModel,
@@ -141,27 +193,22 @@ async def _submit_fuel_record(
     lang: str,
     reply_message: Message,
 ) -> None:
-    """Submit a validated fuel record or enqueue it when LubeLogger is unreachable."""
+    """Submit fuel, reconcile ambiguous writes, or enqueue when offline."""
     payload = GasRecordPayload.from_validated(record)
     client: LubeLoggerClient = context.bot_data["lubelogger_client"]
     try:
         await client.add_gas_record(vehicle_id, payload)
-        await reply_message.reply_text(
-            get_text(
-                "fuel_saved",
-                lang,
-                liters=str(record.liters),
-                cost=str(record.cost),
-                odometer=str(record.odometer),
+        await reply_message.reply_text(_fuel_saved_message(record, lang))
+    except (LubeLoggerUnreachableError, LubeLoggerResponseError):
+        await _queue_or_confirm_ambiguous_fuel(
+            context, record, payload, vehicle_id, user_id, lang, reply_message
+        )
+    except LubeLoggerApiError as exc:
+        if exc.is_ambiguous:
+            await _queue_or_confirm_ambiguous_fuel(
+                context, record, payload, vehicle_id, user_id, lang, reply_message
             )
-        )
-    except LubeLoggerUnreachableError:
-        queue_service: QueueService = context.bot_data["queue_service"]
-        await queue_service.enqueue(
-            user_id, vehicle_id, "gas", payload.model_dump_json(by_alias=True)
-        )
-        await reply_message.reply_text(get_text("fuel_queued", lang))
-    except LubeLoggerApiError:
+            return
         await reply_message.reply_text(get_text("lubelogger_error", lang))
 
 

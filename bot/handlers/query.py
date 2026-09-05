@@ -7,7 +7,7 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError
+from bot.exceptions import LubeLoggerApiError, LubeLoggerResponseError, LubeLoggerUnreachableError
 from bot.i18n import get_text
 from bot.services.config_store import ConfigStore
 from bot.services.lubelogger_client import LubeLoggerClient
@@ -72,7 +72,7 @@ async def last_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await update.message.reply_text(get_text("usage_last", lang))
     except LubeLoggerUnreachableError:
         await update.message.reply_text(get_text("lubelogger_unreachable", lang))
-    except LubeLoggerApiError:
+    except (LubeLoggerApiError, LubeLoggerResponseError):
         await update.message.reply_text(get_text("lubelogger_error", lang))
 
 

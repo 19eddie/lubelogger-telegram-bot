@@ -15,7 +15,12 @@ from telegram.ext import (
     filters,
 )
 
-from bot.exceptions import LubeLoggerApiError, LubeLoggerUnreachableError, ParseError
+from bot.exceptions import (
+    LubeLoggerApiError,
+    LubeLoggerResponseError,
+    LubeLoggerUnreachableError,
+    ParseError,
+)
 from bot.i18n import get_text
 from bot.models.payloads import ServiceRecordPayload
 from bot.models.validators import ServiceRecordModel
@@ -79,7 +84,7 @@ async def _submit_service_record(
                 odometer=record.odometer,
             )
         )
-    except LubeLoggerUnreachableError:
+    except (LubeLoggerUnreachableError, LubeLoggerResponseError):
         await queue_service.enqueue(
             user_id=user_id,
             vehicle_id=vehicle_id,

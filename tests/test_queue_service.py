@@ -10,6 +10,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from bot.exceptions import LubeLoggerResponseError
 from bot.services.database import init_db
 from bot.services.queue_service import QueueService
 
@@ -172,3 +173,72 @@ async def test_property_queue_retry_exhaustion(
     pending = await service.get_pending()
     matching = [item for item in pending if item.id == item_id]
     assert len(matching) == 0
+
+
+@pytest.mark.asyncio
+async def test_flush_marks_existing_gas_as_sent_without_duplicate_post(tmp_path: object) -> None:
+    """A queued gas record already present remotely must not be posted again."""
+    from unittest.mock import AsyncMock
+
+    from bot.models.payloads import GasRecordPayload
+
+    db_path = str(tmp_path / "queue.db")  # type: ignore[operator]
+    await init_db(db_path)
+    service = QueueService(db_path)
+    payload = GasRecordPayload(
+        date="2026-05-04",
+        odometer="295950",
+        fuel_consumed="11,67",
+        cost="18,66",
+        is_fill_to_full="true",
+        missed_fuel_up="false",
+    )
+    await service.enqueue(123, 1, "gas", payload.model_dump_json(by_alias=True))
+
+    client = AsyncMock()
+    client.gas_record_exists = AsyncMock(return_value=True)
+    client.add_gas_record = AsyncMock()
+
+    result = await service.flush(client)
+
+    assert result.sent == 1
+    assert result.failed == 0
+    assert result.remaining == 0
+    client.gas_record_exists.assert_awaited_once_with(1, payload)
+    client.add_gas_record.assert_not_awaited()
+    assert await service.get_pending() == []
+
+
+@pytest.mark.asyncio
+async def test_flush_keeps_item_pending_when_reconciliation_response_is_invalid(
+    tmp_path: object,
+) -> None:
+    """Unknown remote state must not discard a valid queued record."""
+    from unittest.mock import AsyncMock
+
+    from bot.models.payloads import GasRecordPayload
+
+    db_path = str(tmp_path / "queue.db")  # type: ignore[operator]
+    await init_db(db_path)
+    service = QueueService(db_path)
+    payload = GasRecordPayload(
+        date="2026-05-04",
+        odometer="295950",
+        fuel_consumed="11,67",
+        cost="18,66",
+        is_fill_to_full="true",
+        missed_fuel_up="false",
+    )
+    await service.enqueue(123, 1, "gas", payload.model_dump_json(by_alias=True))
+
+    client = AsyncMock()
+    client.gas_record_exists = AsyncMock(side_effect=LubeLoggerResponseError("invalid remote data"))
+    client.add_gas_record = AsyncMock()
+
+    result = await service.flush(client)
+
+    assert result.sent == 0
+    assert result.failed == 0
+    assert result.remaining == 1
+    client.add_gas_record.assert_not_awaited()
+    assert len(await service.get_pending()) == 1

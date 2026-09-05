@@ -124,7 +124,11 @@ def main() -> None:
     async def post_init(application: Application) -> None:  # type: ignore[type-arg]
         await init_db(config.db_path)
         client = LubeLoggerClient(
-            config.lubelogger_url, config.lubelogger_api_key, config.http_timeout
+            config.lubelogger_url,
+            config.lubelogger_api_key,
+            config.http_timeout,
+            username=config.lubelogger_username,
+            password=config.lubelogger_password,
         )
         queue_service = QueueService(config.db_path, config.max_retry_attempts)
         config_store = ConfigStore(config.db_path)
