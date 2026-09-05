@@ -161,3 +161,33 @@ def test_gas_payload_serializes_date_and_missed_flag() -> None:
     assert data["date"] == "2024-01-15"
     assert data["missedFuelUp"] == "true"
     assert all(isinstance(value, str) for value in data.values())
+
+
+def test_gas_payload_uses_comma_decimal_separator() -> None:
+    """LubeLogger 1.5.x expects locale-formatted decimal strings."""
+    record = GasRecordModel(
+        date="2026-05-01",
+        odometer=295637,
+        liters=11.27,
+        cost=18.02,
+    )
+
+    data = GasRecordPayload.from_validated(record).model_dump(by_alias=True)
+
+    assert data["fuelConsumed"] == "11,27"
+    assert data["cost"] == "18,02"
+
+
+def test_lubelogger_decimal_formatter_avoids_float_artifacts() -> None:
+    """Decimal conversion keeps values such as 0.1 and scientific notation exact."""
+    values = [
+        GasRecordModel(odometer=1, liters=0.1, cost=0.01),
+        GasRecordModel(odometer=1, liters=1e-07, cost=100.0),
+    ]
+
+    payloads = [GasRecordPayload.from_validated(record) for record in values]
+
+    assert payloads[0].fuel_consumed == "0,1"
+    assert payloads[0].cost == "0,01"
+    assert payloads[1].fuel_consumed == "0,0000001"
+    assert payloads[1].cost == "100"

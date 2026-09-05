@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,6 +13,14 @@ if TYPE_CHECKING:
         OdometerRecordModel,
         ServiceRecordModel,
     )
+
+
+def _format_lubelogger_decimal(value: float) -> str:
+    """Format a decimal string for the current LubeLogger locale."""
+    formatted = format(Decimal(str(value)), "f")
+    if "." in formatted:
+        formatted = formatted.rstrip("0").rstrip(".")
+    return formatted.replace(".", ",")
 
 
 class GasRecordPayload(BaseModel):
@@ -34,8 +43,8 @@ class GasRecordPayload(BaseModel):
         return cls(
             date=record.date,
             odometer=str(record.odometer),
-            fuel_consumed=str(record.liters),
-            cost=str(record.cost),
+            fuel_consumed=_format_lubelogger_decimal(record.liters),
+            cost=_format_lubelogger_decimal(record.cost),
             is_fill_to_full=str(record.is_fill_to_full).lower(),
             missed_fuel_up=str(record.missed_fuel_up).lower(),
         )
@@ -43,6 +52,8 @@ class GasRecordPayload(BaseModel):
 
 class ServiceRecordPayload(BaseModel):
     """Matches LubeLogger GenericRecordExportModel — all fields as strings."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     date: str
     odometer: str
@@ -58,12 +69,14 @@ class ServiceRecordPayload(BaseModel):
             date=record.date,
             odometer=str(record.odometer),
             description=record.description,
-            cost=str(record.cost),
+            cost=_format_lubelogger_decimal(record.cost),
         )
 
 
 class OdometerRecordPayload(BaseModel):
     """Matches LubeLogger OdometerRecordExportModel — all fields as strings."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     date: str
     odometer: str
