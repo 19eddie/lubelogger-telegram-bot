@@ -1,0 +1,6 @@
+interface:
+  display_name: "Lubelogger Telegram Bot"
+  short_description: "Repo-specific patterns and workflows for lubelogger-telegram-bot"
+  default_prompt: "Use the lubelogger-telegram-bot repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
