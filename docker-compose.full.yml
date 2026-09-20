@@ -9,7 +9,7 @@ services:
       - 8080:8080
 
   telegram-bot:
-    build: .
+    image: ghcr.io/19eddie/lubelogger-telegram-bot:latest
     restart: unless-stopped
     depends_on:
       - app

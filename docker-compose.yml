@@ -1,6 +1,6 @@
 services:
   telegram-bot:
-    build: .
+    image: ghcr.io/19eddie/lubelogger-telegram-bot:latest
     restart: unless-stopped
     volumes:
       - lubelogger_bot_data:/data
