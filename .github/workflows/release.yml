@@ -62,17 +62,18 @@ jobs:
         id: get_version
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          NEW_RELEASE_VERSION: ${{ needs.release.outputs.new_release_version }}
         run: |
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "VERSION=${{ needs.release.outputs.new_release_version }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]; then
+            echo "VERSION=$NEW_RELEASE_VERSION" >> "$GITHUB_ENV"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             # Extract version from tag (e.g., refs/tags/v1.0.0 -> 1.0.0)
             TAG_NAME=${GITHUB_REF#refs/tags/v}
-            echo "VERSION=${TAG_NAME}" >> $GITHUB_ENV
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "VERSION=${TAG_NAME}" >> "$GITHUB_ENV"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
              # Remove 'v' prefix if user accidentally included it, safely using env var
              CLEAN_VERSION=$(echo "$INPUT_VERSION" | sed 's/^v//')
-             echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+             echo "VERSION=${CLEAN_VERSION}" >> "$GITHUB_ENV"
           else
              echo "Could not determine version"
           fi
