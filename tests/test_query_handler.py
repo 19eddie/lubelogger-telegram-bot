@@ -81,9 +81,7 @@ class TestLastCommand:
         assert "missed" not in msg.lower()
         """'/last fuel' with no records shows empty message."""
         update, context = _make_update_and_context(args=["fuel"])
-        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(
-            return_value=None
-        )
+        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(return_value=None)
 
         await last_command(update, context)
 
@@ -109,9 +107,7 @@ class TestLastCommand:
     async def test_last_km_empty(self) -> None:
         """'/last km' with no records shows empty message."""
         update, context = _make_update_and_context(args=["km"])
-        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
-            return_value=None
-        )
+        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(return_value=None)
 
         await last_command(update, context)
 

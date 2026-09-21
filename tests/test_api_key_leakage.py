@@ -47,14 +47,10 @@ async def test_property_api_key_non_leakage(api_key: str) -> None:
 
     # 1. Verify repr() of the client does not leak the key
     client_repr = repr(client)
-    assert api_key not in client_repr, (
-        f"API key leaked in client repr: {client_repr}"
-    )
+    assert api_key not in client_repr, f"API key leaked in client repr: {client_repr}"
 
     # 2. Simulate connection error and verify key is not in error string
-    with patch.object(
-        client._client, "request", new_callable=AsyncMock
-    ) as mock_request:
+    with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
         mock_request.side_effect = httpx.ConnectError("Connection refused")
         with pytest.raises(LubeLoggerUnreachableError) as exc_info:
             await client.get_vehicles()
@@ -69,15 +65,11 @@ async def test_property_api_key_non_leakage(api_key: str) -> None:
         text="Unauthorized",
         request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
     )
-    with patch.object(
-        client._client, "request", new_callable=AsyncMock
-    ) as mock_request:
+    with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
         mock_request.return_value = mock_response
         with pytest.raises(LubeLoggerApiError) as exc_info:
             await client.get_vehicles()
         error_str = str(exc_info.value)
-        assert api_key not in error_str, (
-            f"API key leaked in LubeLoggerApiError: {error_str}"
-        )
+        assert api_key not in error_str, f"API key leaked in LubeLoggerApiError: {error_str}"
 
     await client.close()

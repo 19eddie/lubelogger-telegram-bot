@@ -77,9 +77,7 @@ class TestParseService:
 
     def test_comma_decimal_cost(self) -> None:
         result = CommandParser.parse_service('50000 "Tire rotation" 30,00')
-        assert result == ServiceInput(
-            odometer="50000", description="Tire rotation", cost="30.00"
-        )
+        assert result == ServiceInput(odometer="50000", description="Tire rotation", cost="30.00")
 
     def test_empty_string(self) -> None:
         with pytest.raises(ParseError) as exc_info:
@@ -177,11 +175,8 @@ class TestRoundTrip:
         parsed = CommandParser.parse_odometer(formatted)
         assert parsed.odometer == original.odometer
 
-
     def test_parsing_date_and_missed_options(self) -> None:
-        result = CommandParser.parse_fuel(
-            "45000 42,5 78,90 --date 2024-01-15 --missed"
-        )
+        result = CommandParser.parse_fuel("45000 42,5 78,90 --date 2024-01-15 --missed")
 
         assert result == FuelInput(
             odometer="45000",
@@ -192,9 +187,7 @@ class TestRoundTrip:
         )
 
     def test_parsing_options_before_positional_values(self) -> None:
-        result = CommandParser.parse_fuel(
-            "--missed --date 2024-01-15 45000 42.5 78.90"
-        )
+        result = CommandParser.parse_fuel("--missed --date 2024-01-15 45000 42.5 78.90")
 
         assert result.date == "2024-01-15"
         assert result.missed_fuel_up is True
@@ -207,9 +200,7 @@ class TestRoundTrip:
         with pytest.raises(ParseError):
             CommandParser.parse_fuel("45000 42.5 78.90 --missed --missed")
         with pytest.raises(ParseError):
-            CommandParser.parse_fuel(
-                "45000 42.5 78.90 --date 2024-01-15 --date 2024-01-16"
-            )
+            CommandParser.parse_fuel("45000 42.5 78.90 --date 2024-01-15 --date 2024-01-16")
 
     def test_unknown_option_is_rejected(self) -> None:
         with pytest.raises(ParseError):
