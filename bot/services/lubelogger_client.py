@@ -60,9 +60,11 @@ def _sanitize_payload(payload: dict[str, str] | None) -> dict[str, str] | None:
     }
 
 
-def _sanitize_response_body(body: str, api_key: str) -> str:
+def _sanitize_response_body(body: str, api_key: str, password: str = "") -> str:
     """Redact credentials and cap an API error body before logging or raising."""
     sanitized = body.replace(api_key, "[REDACTED]") if api_key else body
+    if password:
+        sanitized = sanitized.replace(password, "[REDACTED]")
     sanitized = _SENSITIVE_VALUE_RE.sub(r"\1[REDACTED]", sanitized)
     if len(sanitized) > _MAX_ERROR_BODY_LENGTH:
         sanitized = sanitized[:_MAX_ERROR_BODY_LENGTH] + "...[truncated]"
@@ -119,6 +121,7 @@ class LubeLoggerClient:
         elif api_key:
             headers["x-api-key"] = api_key
         self._api_key = api_key
+        self._password = password
         self._client = httpx.AsyncClient(
             base_url=base_url,
             headers=headers,
@@ -159,7 +162,7 @@ class LubeLoggerClient:
             raise LubeLoggerUnreachableError("Unable to connect to LubeLogger") from exc
 
         if not response.is_success:
-            error_body = _sanitize_response_body(response.text, self._api_key)
+            error_body = _sanitize_response_body(response.text, self._api_key, self._password)
             logger.error(
                 "LubeLogger API error: status=%d method=%s path=%s params=%s "
                 "payload=%s response_body=%s",
