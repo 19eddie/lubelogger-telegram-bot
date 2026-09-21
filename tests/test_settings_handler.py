@@ -99,9 +99,7 @@ class TestLangCommand:
 
         update.message.reply_text.assert_called_once()
         call_kwargs = update.message.reply_text.call_args
-        reply_markup = call_kwargs.kwargs.get("reply_markup") or call_kwargs[1].get(
-            "reply_markup"
-        )
+        reply_markup = call_kwargs.kwargs.get("reply_markup") or call_kwargs[1].get("reply_markup")
         assert reply_markup is not None
 
         # Verify the keyboard contains all supported languages
@@ -116,12 +114,8 @@ class TestLangCommand:
         await lang_command(update, context)
 
         call_kwargs = update.message.reply_text.call_args
-        reply_markup = call_kwargs.kwargs.get("reply_markup") or call_kwargs[1].get(
-            "reply_markup"
-        )
-        callback_data = [
-            btn.callback_data for row in reply_markup.inline_keyboard for btn in row
-        ]
+        reply_markup = call_kwargs.kwargs.get("reply_markup") or call_kwargs[1].get("reply_markup")
+        callback_data = [btn.callback_data for row in reply_markup.inline_keyboard for btn in row]
         for code in SUPPORTED_LANGUAGES:
             assert f"lang:{code}" in callback_data
 
