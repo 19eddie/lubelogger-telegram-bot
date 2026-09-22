@@ -29,11 +29,11 @@ class TestBotConfig:
         env = self._env()
         with patch.dict(os.environ, env, clear=True):
             config = BotConfig()  # type: ignore[call-arg]
-        assert config.telegram_bot_token == "123456:ABC-DEF"
+        assert config.telegram_bot_token.get_secret_value() == "123456:ABC-DEF"
         assert config.lubelogger_url == "http://lubelogger:8080"
-        assert config.lubelogger_api_key == "test-key-123"
+        assert config.lubelogger_api_key.get_secret_value() == "test-key-123"
         assert config.lubelogger_username == ""
-        assert config.lubelogger_password == ""
+        assert config.lubelogger_password.get_secret_value() == ""
         assert config.allowed_user_ids == [111, 222, 333]
 
     def test_default_values(self) -> None:
@@ -70,7 +70,7 @@ class TestBotConfig:
         with patch.dict(os.environ, env, clear=True):
             config = BotConfig()  # type: ignore[call-arg]
         assert config.lubelogger_username == "user"
-        assert config.lubelogger_password == "pass"
+        assert config.lubelogger_password.get_secret_value() == "pass"
 
     def test_basic_auth_credentials_must_be_paired(self) -> None:
         env = self._env(LUBELOGGER_USERNAME="user")
@@ -102,5 +102,5 @@ class TestLoadConfig:
         }
         with patch.dict(os.environ, env, clear=True):
             config = load_config()
-        assert config.telegram_bot_token == "tok"
+        assert config.telegram_bot_token.get_secret_value() == "tok"
         assert config.allowed_user_ids == [1, 2]

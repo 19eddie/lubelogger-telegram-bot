@@ -1,0 +1,4 @@
+## 2025-02-14 - Use SecretStr for sensitive configuration fields
+**Vulnerability:** Application configuration stored sensitive credentials (bot token, API keys, basic auth passwords) as plain strings in the Pydantic settings model.
+**Learning:** By using standard strings for credentials, Pydantic models might inadvertently leak secrets if the configuration object is logged, serialized, or exposed in an exception traceback.
+**Prevention:** Use `SecretStr` from `pydantic` for sensitive configuration properties. This ensures the secrets are obfuscated when the model is represented as a string, and requires explicit calls to `.get_secret_value()` to extract the actual plain text, preventing accidental leakage.
