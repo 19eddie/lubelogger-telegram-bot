@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, SecretStr, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings.sources.base import PydanticBaseSettingsSource
@@ -56,11 +56,11 @@ class _CommaSplitDotEnvSource(DotEnvSettingsSource):
 class BotConfig(BaseSettings):
     """Bot configuration loaded from environment variables."""
 
-    telegram_bot_token: str = Field(min_length=1)
+    telegram_bot_token: SecretStr = Field(min_length=1)
     lubelogger_url: str = Field(min_length=1)
-    lubelogger_api_key: str = ""
+    lubelogger_api_key: SecretStr = SecretStr("")
     lubelogger_username: str = ""
-    lubelogger_password: str = ""
+    lubelogger_password: SecretStr = SecretStr("")
     allowed_user_ids: list[int] = Field(min_length=1)
     queue_retry_interval: int = Field(default=300, gt=0)
     http_timeout: int = Field(default=10, gt=0)
@@ -72,7 +72,7 @@ class BotConfig(BaseSettings):
     @model_validator(mode="after")
     def basic_credentials_are_complete(self) -> Self:
         """Require both Basic Auth fields when legacy auth is configured."""
-        if bool(self.lubelogger_username) != bool(self.lubelogger_password):
+        if bool(self.lubelogger_username) != bool(self.lubelogger_password.get_secret_value()):
             raise ValueError("LUBELOGGER_USERNAME and LUBELOGGER_PASSWORD must be set together")
         return self
 
