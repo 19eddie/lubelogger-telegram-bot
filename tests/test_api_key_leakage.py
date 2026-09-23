@@ -76,6 +76,36 @@ async def test_property_api_key_non_leakage(api_key: str) -> None:
 
 
 @pytest.mark.asyncio
+async def test_property_overlapping_credentials_non_leakage() -> None:
+    """When credentials overlap, the longer credential SHALL be fully redacted."""
+    password = "secret-key"
+    api_key = "key"
+    client = LubeLoggerClient(
+        base_url="http://localhost:8080",
+        api_key=api_key,
+        username="user",
+        password=password,
+    )
+
+    # Server mirrors the exact longer password
+    mock_response = httpx.Response(
+        status_code=401,
+        text=f"Unauthorized: token '{password}' is incorrect",
+        request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
+    )
+    with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
+        mock_request.return_value = mock_response
+        with pytest.raises(LubeLoggerApiError) as exc_info:
+            await client.get_vehicles()
+        error_str = str(exc_info.value)
+        # If order was wrong, 'secret-key' becomes 'secret-[REDACTED]'
+        assert "secret-" not in error_str, f"Overlapping credential partially leaked: {error_str}"
+        assert "[REDACTED]" in error_str
+
+    await client.close()
+
+
+@pytest.mark.asyncio
 async def test_property_basic_auth_password_non_leakage() -> None:
     """The Basic Auth password SHALL NOT be leaked in API errors."""
     password = "secret_basic_password_123"
