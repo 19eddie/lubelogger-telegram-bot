@@ -62,9 +62,10 @@ def _sanitize_payload(payload: dict[str, str] | None) -> dict[str, str] | None:
 
 def _sanitize_response_body(body: str, api_key: str, password: str = "") -> str:
     """Redact credentials and cap an API error body before logging or raising."""
-    sanitized = body.replace(api_key, "[REDACTED]") if api_key else body
-    if password:
-        sanitized = sanitized.replace(password, "[REDACTED]")
+    sanitized = body
+    for credential in sorted((api_key, password), key=len, reverse=True):
+        if credential:
+            sanitized = sanitized.replace(credential, "[REDACTED]")
     sanitized = _SENSITIVE_VALUE_RE.sub(r"\1[REDACTED]", sanitized)
     if len(sanitized) > _MAX_ERROR_BODY_LENGTH:
         sanitized = sanitized[:_MAX_ERROR_BODY_LENGTH] + "...[truncated]"

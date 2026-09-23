@@ -73,3 +73,29 @@ async def test_property_api_key_non_leakage(api_key: str) -> None:
         assert api_key not in error_str, f"API key leaked in LubeLoggerApiError: {error_str}"
 
     await client.close()
+
+
+@pytest.mark.asyncio
+async def test_property_basic_auth_password_non_leakage() -> None:
+    """The Basic Auth password SHALL NOT be leaked in API errors."""
+    password = "secret_basic_password_123"
+    client = LubeLoggerClient(
+        base_url="http://localhost:8080",
+        api_key="",
+        username="user",
+        password=password,
+    )
+
+    mock_response = httpx.Response(
+        status_code=401,
+        text=f"Unauthorized: password '{password}' is incorrect",
+        request=httpx.Request("GET", "http://localhost:8080/api/vehicles"),
+    )
+    with patch.object(client._client, "request", new_callable=AsyncMock) as mock_request:
+        mock_request.return_value = mock_response
+        with pytest.raises(LubeLoggerApiError) as exc_info:
+            await client.get_vehicles()
+        error_str = str(exc_info.value)
+        assert password not in error_str, f"Password leaked in LubeLoggerApiError: {error_str}"
+
+    await client.close()

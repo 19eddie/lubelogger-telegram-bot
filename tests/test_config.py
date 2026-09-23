@@ -72,6 +72,44 @@ class TestBotConfig:
         assert config.lubelogger_username == "user"
         assert config.lubelogger_password.get_secret_value() == "pass"
 
+    def test_config_secrets_masked_in_repr(self) -> None:
+        env = self._env(
+            TELEGRAM_BOT_TOKEN="secret-token-123",
+            LUBELOGGER_API_KEY="secret-api-key",
+            LUBELOGGER_USERNAME="user",
+            LUBELOGGER_PASSWORD="secret-password",
+        )
+        with patch.dict(os.environ, env, clear=True):
+            config = BotConfig()  # type: ignore[call-arg]
+            config_repr = repr(config)
+            config_str = str(config)
+
+        assert "secret-token-123" not in config_repr
+        assert "secret-api-key" not in config_repr
+        assert "secret-password" not in config_repr
+
+        assert "secret-token-123" not in config_str
+        assert "secret-api-key" not in config_str
+        assert "secret-password" not in config_str
+
+    def test_config_validation_error_masks_secrets(self) -> None:
+        env = {
+            "TELEGRAM_BOT_TOKEN": "secret-token-123",
+            "LUBELOGGER_URL": "http://lubelogger:8080",
+            "LUBELOGGER_API_KEY": "secret-api-key",
+            "LUBELOGGER_USERNAME": "user",
+            "LUBELOGGER_PASSWORD": "secret-password",
+            "ALLOWED_USER_IDS": "-1",  # This will cause a validation error
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(ConfigurationError) as exc_info:
+                load_config()
+
+        error_msg = str(exc_info.value)
+        assert "secret-token-123" not in error_msg
+        assert "secret-api-key" not in error_msg
+        assert "secret-password" not in error_msg
+
     def test_basic_auth_credentials_must_be_paired(self) -> None:
         env = self._env(LUBELOGGER_USERNAME="user")
         with patch.dict(os.environ, env, clear=True):
