@@ -73,7 +73,7 @@ All data-entry commands also work without arguments — the bot will guide you t
 | `ALLOWED_USER_IDS` | Yes | — | Comma-separated Telegram user IDs |
 | `DB_PATH` | No | `/data/bot.db` | SQLite database file path |
 | `QUEUE_RETRY_INTERVAL` | No | `300` | Seconds between queue retry attempts |
-| `HTTP_TIMEOUT` | No | `10` | HTTP request timeout in seconds |
+| `HTTP_TIMEOUT` | No | `60` | HTTP request timeout in seconds |
 | `MAX_RETRY_ATTEMPTS` | No | `3` | Max retries before marking a record as failed |
 
 ## Docker Compose

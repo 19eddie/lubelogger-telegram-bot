@@ -11,6 +11,14 @@ from bot.config import BotConfig, load_config
 from bot.exceptions import ConfigurationError
 
 
+@pytest.fixture(autouse=True)
+def _isolate_env_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "bot.config.BotConfig.model_config",
+        {**BotConfig.model_config, "env_file": None},
+    )
+
+
 class TestBotConfig:
     """BotConfig loads and validates environment variables."""
 
@@ -41,7 +49,7 @@ class TestBotConfig:
         with patch.dict(os.environ, env, clear=True):
             config = BotConfig()  # type: ignore[call-arg]
         assert config.queue_retry_interval == 300
-        assert config.http_timeout == 10
+        assert config.http_timeout == 60
         assert config.max_retry_attempts == 3
         assert config.db_path == "/data/bot.db"
 
