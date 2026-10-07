@@ -107,7 +107,7 @@ class LubeLoggerClient:
         self,
         base_url: str,
         api_key: str,
-        timeout: int = 10,
+        timeout: int = 60,
         *,
         username: str = "",
         password: str = "",

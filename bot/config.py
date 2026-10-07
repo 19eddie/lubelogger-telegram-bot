@@ -63,7 +63,7 @@ class BotConfig(BaseSettings):
     lubelogger_password: SecretStr = SecretStr("")
     allowed_user_ids: list[int] = Field(min_length=1)
     queue_retry_interval: int = Field(default=300, gt=0)
-    http_timeout: int = Field(default=10, gt=0)
+    http_timeout: int = Field(default=60, gt=0)
     max_retry_attempts: int = Field(default=3, gt=0)
     db_path: str = "/data/bot.db"
 
