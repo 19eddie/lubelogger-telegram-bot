@@ -1,6 +1,7 @@
-"""Property tests for payload serialization — all fields must be strings."""
+"""Property tests for payload serialization — culture-invariant native decimal types."""
 
-# Feature: lubelogger-telegram-bot, Property 11: Payload serialization produces all-string fields
+# Feature: lubelogger-telegram-bot
+# Property 11: Payload serialization produces culture-invariant types
 
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from bot.models.payloads import (
     GasRecordPayload,
     OdometerRecordPayload,
     ServiceRecordPayload,
+    _format_lubelogger_decimal,
     gas_payload_matches_record,
 )
 from bot.models.validators import GasRecordModel, OdometerRecordModel, ServiceRecordModel
@@ -64,76 +66,84 @@ odometer_record_st = st.builds(
 
 @settings(max_examples=100)
 @given(record=gas_record_st)
-def test_property_payload_all_strings_gas(record: GasRecordModel) -> None:
+def test_property_payload_types_gas(record: GasRecordModel) -> None:
     """Validates: Requirements 4.9
 
     For any valid GasRecordModel, converting via from_validated() produces
-    an object where every field value is a string.
+    native numeric and boolean types for culture-invariant API serialization.
     """
     payload = GasRecordPayload.from_validated(record)
     data = payload.model_dump(by_alias=True)
-    for key, value in data.items():
-        assert isinstance(value, str), (
-            f"Field '{key}' has type {type(value).__name__}, expected str"
-        )
+    assert isinstance(data["date"], str)
+    assert isinstance(data["odometer"], int)
+    assert isinstance(data["fuelConsumed"], (int, float))
+    assert isinstance(data["cost"], (int, float))
+    assert isinstance(data["isFillToFull"], bool)
+    assert isinstance(data["missedFuelUp"], bool)
+    assert isinstance(data["notes"], str)
+    assert isinstance(data["tags"], str)
 
 
 @settings(max_examples=100)
 @given(record=service_record_st)
-def test_property_payload_all_strings_service(record: ServiceRecordModel) -> None:
+def test_property_payload_types_service(record: ServiceRecordModel) -> None:
     """Validates: Requirements 5.7
 
     For any valid ServiceRecordModel, converting via from_validated() produces
-    an object where every field value is a string.
+    native numeric odometer and cost for culture-invariant API serialization.
     """
     payload = ServiceRecordPayload.from_validated(record)
     data = payload.model_dump(by_alias=True)
-    for key, value in data.items():
-        assert isinstance(value, str), (
-            f"Field '{key}' has type {type(value).__name__}, expected str"
-        )
+    assert isinstance(data["date"], str)
+    assert isinstance(data["odometer"], int)
+    assert isinstance(data["description"], str)
+    assert isinstance(data["cost"], (int, float))
+    assert isinstance(data["notes"], str)
+    assert isinstance(data["tags"], str)
 
 
 @settings(max_examples=100)
 @given(record=odometer_record_st)
-def test_property_payload_all_strings_odometer(record: OdometerRecordModel) -> None:
+def test_property_payload_types_odometer(record: OdometerRecordModel) -> None:
     """Validates: Requirements 6.5
 
     For any valid OdometerRecordModel, converting via from_validated() produces
-    an object where every field value is a string.
+    native numeric odometer.
     """
     payload = OdometerRecordPayload.from_validated(record)
     data = payload.model_dump(by_alias=True)
-    for key, value in data.items():
-        assert isinstance(value, str), (
-            f"Field '{key}' has type {type(value).__name__}, expected str"
-        )
+    assert isinstance(data["date"], str)
+    assert isinstance(data["odometer"], int)
+    assert isinstance(data["notes"], str)
+    assert isinstance(data["tags"], str)
 
 
 @settings(max_examples=100)
 @given(
     record=st.one_of(gas_record_st, service_record_st, odometer_record_st),
 )
-def test_property_payload_all_strings(
+def test_property_payload_culture_invariance(
     record: GasRecordModel | ServiceRecordModel | OdometerRecordModel,
 ) -> None:
     """Validates: Requirements 4.9, 5.7, 6.5
 
-    For any valid GasRecordModel, ServiceRecordModel, or OdometerRecordModel,
-    converting via from_validated() produces an object where every field value is a string.
+    For any valid record, converting via from_validated() preserves
+    the exact numerical values.
     """
     if isinstance(record, GasRecordModel):
         payload = GasRecordPayload.from_validated(record)
+        assert payload.odometer == record.odometer
+        assert payload.fuel_consumed == record.liters
+        assert payload.cost == record.cost
+        assert payload.is_fill_to_full == record.is_fill_to_full
+        assert payload.missed_fuel_up == record.missed_fuel_up
     elif isinstance(record, ServiceRecordModel):
         payload = ServiceRecordPayload.from_validated(record)
+        assert payload.odometer == record.odometer
+        assert payload.cost == record.cost
     else:
         payload = OdometerRecordPayload.from_validated(record)
-
-    data = payload.model_dump(by_alias=True)
-    for key, value in data.items():
-        assert isinstance(value, str), (
-            f"Field '{key}' has type {type(value).__name__}, expected str"
-        )
+        assert payload.odometer == record.odometer
 
 
 def test_gas_payload_omits_soc_without_user_data() -> None:
@@ -160,12 +170,15 @@ def test_gas_payload_serializes_date_and_missed_flag() -> None:
     data = GasRecordPayload.from_validated(record).model_dump(by_alias=True)
 
     assert data["date"] == "2024-01-15"
-    assert data["missedFuelUp"] == "true"
-    assert all(isinstance(value, str) for value in data.values())
+    assert data["missedFuelUp"] is True
+    assert data["isFillToFull"] is True
+    assert data["fuelConsumed"] == 42.5
+    assert data["cost"] == 78.9
+    assert data["odometer"] == 45000
 
 
-def test_gas_payload_uses_comma_decimal_separator() -> None:
-    """LubeLogger 1.5.x expects locale-formatted decimal strings."""
+def test_gas_payload_uses_numeric_types() -> None:
+    """LubeLogger API expects culture-invariant JSON numeric values."""
     record = GasRecordModel(
         date="2026-05-01",
         odometer=295637,
@@ -175,34 +188,27 @@ def test_gas_payload_uses_comma_decimal_separator() -> None:
 
     data = GasRecordPayload.from_validated(record).model_dump(by_alias=True)
 
-    assert data["fuelConsumed"] == "11,27"
-    assert data["cost"] == "18,02"
+    assert data["fuelConsumed"] == 11.27
+    assert data["cost"] == 18.02
+    assert data["odometer"] == 295637
 
 
 def test_lubelogger_decimal_formatter_avoids_float_artifacts() -> None:
-    """Decimal conversion keeps values such as 0.1 and scientific notation exact."""
-    values = [
-        GasRecordModel(odometer=1, liters=0.1, cost=0.01),
-        GasRecordModel(odometer=1, liters=1e-07, cost=100.0),
-    ]
-
-    payloads = [GasRecordPayload.from_validated(record) for record in values]
-
-    assert payloads[0].fuel_consumed == "0,1"
-    assert payloads[0].cost == "0,01"
-    assert payloads[1].fuel_consumed == "0,0000001"
-    assert payloads[1].cost == "100"
+    """Decimal formatter keeps values such as 0.1 and scientific notation exact."""
+    assert _format_lubelogger_decimal(0.1) == "0.1"
+    assert _format_lubelogger_decimal(1e-07) == "0.0000001"
+    assert _format_lubelogger_decimal(100.0) == "100"
 
 
 def test_gas_payload_matches_remote_locale_formats() -> None:
     """Fingerprint matching accepts server dot/comma formatting but rejects 1167."""
     payload = GasRecordPayload(
         date="2026-05-04",
-        odometer="295950",
-        fuel_consumed="11,67",
-        cost="18,66",
-        is_fill_to_full="true",
-        missed_fuel_up="false",
+        odometer=295950,
+        fuel_consumed=11.67,
+        cost=18.66,
+        is_fill_to_full=True,
+        missed_fuel_up=False,
     )
     remote_record = {
         "date": "2026-05-04",

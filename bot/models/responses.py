@@ -10,9 +10,12 @@ from pydantic import BaseModel, ConfigDict, Field
 class ApiResponse(BaseModel):
     """Represents a response from the LubeLogger API."""
 
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
     success: bool
     message: str
-    data: dict[str, Any] | None = None
+    additional_data: Any | None = Field(default=None, alias="additionalData")
+    data: Any | None = None
 
 
 class Vehicle(BaseModel):

@@ -299,7 +299,7 @@ class TestFuelMetadataIntegration:
 
         payload = lubelogger_client.add_gas_record.call_args[0][1]
         assert payload.date == "2024-01-15"
-        assert payload.missed_fuel_up == "true"
+        assert payload.missed_fuel_up is True
 
     async def test_offline_queue_preserves_date_and_missed_flag(self, tmp_path: object) -> None:
         db_path = str(tmp_path / "test.db")  # type: ignore[operator]
@@ -337,7 +337,7 @@ class TestFuelMetadataIntegration:
         assert len(pending) == 1
         payload = json.loads(pending[0].payload)
         assert payload["date"] == "2024-01-15"
-        assert payload["missedFuelUp"] == "true"
+        assert payload["missedFuelUp"] is True
 
 
 class TestAmbiguousFuelPost:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from pydantic import ValidationError
@@ -50,7 +51,7 @@ def _sanitize_params(
     return {key: "[REDACTED]" if _is_sensitive_key(key) else value for key, value in params.items()}
 
 
-def _sanitize_payload(payload: dict[str, str] | None) -> dict[str, str] | None:
+def _sanitize_payload(payload: dict[str, Any] | None) -> dict[str, Any] | None:
     """Keep diagnostic payload fields while omitting free-text and credential fields."""
     if payload is None:
         return None
@@ -140,7 +141,7 @@ class LubeLoggerClient:
         path: str,
         *,
         params: dict[str, str | int] | None = None,
-        json: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
     ) -> httpx.Response:
         """Execute an HTTP request with unified error handling.
 
@@ -245,7 +246,18 @@ class LubeLoggerClient:
         response = await self._request("GET", "/api/vehicles")
         return [Vehicle.model_validate(v) for v in response.json()]
 
-    async def get_latest_odometer(self, vehicle_id: int) -> dict[str, str] | None:
+    @staticmethod
+    def _record_sort_key(record: dict[str, object]) -> tuple[str, int]:
+        """Sort key prioritizing ISO date, then odometer value."""
+        date_str = str(record.get("date", "")).strip().split("T")[0]
+        odo_raw = str(record.get("odometer", "0")).strip().replace(",", ".")
+        try:
+            odo_val = int(float(odo_raw))
+        except (ValueError, TypeError):
+            odo_val = 0
+        return (date_str, odo_val)
+
+    async def get_latest_odometer(self, vehicle_id: int) -> dict[str, object] | None:
         """Fetch the latest odometer record for a vehicle.
 
         Args:
@@ -254,15 +266,16 @@ class LubeLoggerClient:
         Returns:
             The latest odometer record as a dict, or None if no records exist.
         """
+        path = "/api/vehicle/odometerrecords"
         response = await self._request(
             "GET",
-            "/api/vehicle/odometerrecords",
+            path,
             params={"vehicleId": vehicle_id},
         )
-        records = response.json()
+        records = _decode_record_list(response, path)
         if not records:
             return None
-        return records[-1]
+        return max(records, key=self._record_sort_key)
 
     async def get_gas_records(self, vehicle_id: int) -> list[dict[str, object]]:
         """Fetch all gas records for a vehicle for reconciliation and display."""
@@ -273,7 +286,9 @@ class LubeLoggerClient:
     async def get_latest_gas_record(self, vehicle_id: int) -> dict[str, object] | None:
         """Fetch the latest gas record for a vehicle."""
         records = await self.get_gas_records(vehicle_id)
-        return records[-1] if records else None
+        if not records:
+            return None
+        return max(records, key=self._record_sort_key)
 
     async def gas_record_exists(self, vehicle_id: int, payload: GasRecordPayload) -> bool:
         """Check whether any remote gas record matches the payload fingerprint."""

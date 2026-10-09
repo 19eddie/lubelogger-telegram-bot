@@ -187,11 +187,11 @@ async def test_flush_marks_existing_gas_as_sent_without_duplicate_post(tmp_path:
     service = QueueService(db_path)
     payload = GasRecordPayload(
         date="2026-05-04",
-        odometer="295950",
-        fuel_consumed="11,67",
-        cost="18,66",
-        is_fill_to_full="true",
-        missed_fuel_up="false",
+        odometer=295950,
+        fuel_consumed=11.67,
+        cost=18.66,
+        is_fill_to_full=True,
+        missed_fuel_up=False,
     )
     await service.enqueue(123, 1, "gas", payload.model_dump_json(by_alias=True))
 
@@ -223,11 +223,11 @@ async def test_flush_keeps_item_pending_when_reconciliation_response_is_invalid(
     service = QueueService(db_path)
     payload = GasRecordPayload(
         date="2026-05-04",
-        odometer="295950",
-        fuel_consumed="11,67",
-        cost="18,66",
-        is_fill_to_full="true",
-        missed_fuel_up="false",
+        odometer=295950,
+        fuel_consumed=11.67,
+        cost=18.66,
+        is_fill_to_full=True,
+        missed_fuel_up=False,
     )
     await service.enqueue(123, 1, "gas", payload.model_dump_json(by_alias=True))
 
