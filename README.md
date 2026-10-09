@@ -4,6 +4,8 @@ A Telegram bot that lets you log fuel fill-ups, service records, and odometer re
 
 **Why this exists:** Logging a refuel shouldn't mean opening a browser, navigating to your LubeLogger instance, and filling out a form. With this bot, you send a Telegram message and you're done. It also works great when your LubeLogger runs on a home server with no public access — the bot sits next to it on the same network, and Telegram bridges the gap from anywhere. If LubeLogger is temporarily down, records queue locally and sync later.
 
+<img width="384" height="688" alt="telegram_bot" src="https://github.com/user-attachments/assets/5db9100e-2435-4f8b-a4d3-a9c5dfe70add" />
+
 ## Quick Start
 
 1. **Create a Telegram bot** via [@BotFather](https://t.me/BotFather) and grab your token.
