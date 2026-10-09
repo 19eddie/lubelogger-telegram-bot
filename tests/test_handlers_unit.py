@@ -278,8 +278,8 @@ class TestFuelMetadataConversation:
         context.bot_data["lubelogger_client"].add_gas_record.assert_awaited_once()
         payload = context.bot_data["lubelogger_client"].add_gas_record.call_args[0][1]
         assert payload.date == "2024-01-15"
-        assert payload.is_fill_to_full == "false"
-        assert payload.missed_fuel_up == "true"
+        assert payload.is_fill_to_full is False
+        assert payload.missed_fuel_up is True
         assert context.user_data == {}
 
 
@@ -354,7 +354,7 @@ class TestFuelInlineBooleanCallbacks:
         update.callback_query.answer.assert_awaited_once_with()
         context.bot_data["lubelogger_client"].add_gas_record.assert_awaited_once()
         payload = context.bot_data["lubelogger_client"].add_gas_record.call_args[0][1]
-        assert payload.missed_fuel_up == "false"
+        assert payload.missed_fuel_up is False
         update.callback_query.message.reply_text.assert_awaited_once()
         assert context.user_data == {}
 

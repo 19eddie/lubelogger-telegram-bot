@@ -1,8 +1,9 @@
-"""API payload models matching LubeLogger's expected format (all-string fields)."""
+"""API payload models matching LubeLogger's culture-invariant format."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
@@ -17,24 +18,24 @@ if TYPE_CHECKING:
 
 
 def _format_lubelogger_decimal(value: float) -> str:
-    """Format a decimal string for the current LubeLogger locale."""
+    """Format a decimal string for LubeLogger API (culture-invariant dot separator)."""
     formatted = format(Decimal(str(value)), "f")
     if "." in formatted:
         formatted = formatted.rstrip("0").rstrip(".")
-    return formatted.replace(".", ",")
+    return formatted
 
 
 class GasRecordPayload(BaseModel):
-    """Matches LubeLogger GasRecordExportModel — all fields as strings."""
+    """Matches LubeLogger GasRecordExportModel using native numeric and boolean JSON types."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     date: str
-    odometer: str
-    fuel_consumed: str = Field(alias="fuelConsumed")
-    cost: str
-    is_fill_to_full: str = Field(alias="isFillToFull")  # "true" / "false"
-    missed_fuel_up: str = Field(alias="missedFuelUp")  # "true" / "false"
+    odometer: int
+    fuel_consumed: float = Field(alias="fuelConsumed")
+    cost: float
+    is_fill_to_full: bool = Field(default=True, alias="isFillToFull")
+    missed_fuel_up: bool = Field(default=False, alias="missedFuelUp")
     notes: str = ""
     tags: str = ""
 
@@ -43,11 +44,11 @@ class GasRecordPayload(BaseModel):
         """Create a payload from a validated GasRecordModel."""
         return cls(
             date=record.date,
-            odometer=str(record.odometer),
-            fuel_consumed=_format_lubelogger_decimal(record.liters),
-            cost=_format_lubelogger_decimal(record.cost),
-            is_fill_to_full=str(record.is_fill_to_full).lower(),
-            missed_fuel_up=str(record.missed_fuel_up).lower(),
+            odometer=record.odometer,
+            fuel_consumed=record.liters,
+            cost=record.cost,
+            is_fill_to_full=record.is_fill_to_full,
+            missed_fuel_up=record.missed_fuel_up,
         )
 
 
@@ -73,16 +74,35 @@ def _parse_lubelogger_boolean(value: object) -> bool | None:
     return None
 
 
+def _normalize_date_iso(value: object) -> str:
+    """Normalize date strings to YYYY-MM-DD for fingerprint comparison."""
+    s = str(value).strip().split("T", maxsplit=1)[0]
+    if len(s) == 10 and s[4] == "-" and s[7] == "-":
+        return s
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    return s
+
+
 def gas_payload_matches_record(
     payload: GasRecordPayload,
     remote_record: Mapping[str, object],
 ) -> bool:
     """Return whether a remote gas record matches a payload fingerprint."""
-    remote_date = str(remote_record.get("date", "")).strip().split("T", maxsplit=1)[0]
+    remote_date = _normalize_date_iso(remote_record.get("date", ""))
     if remote_date != payload.date:
         return False
 
-    if str(remote_record.get("odometer", "")).strip() != payload.odometer:
+    remote_odometer_raw = str(remote_record.get("odometer", "")).strip()
+    try:
+        remote_odometer = int(float(remote_odometer_raw.replace(",", ".")))
+    except (ValueError, TypeError):
+        remote_odometer = None
+
+    if remote_odometer != payload.odometer:
         return False
 
     for remote_key, expected_value in (
@@ -109,14 +129,14 @@ def gas_payload_matches_record(
 
 
 class ServiceRecordPayload(BaseModel):
-    """Matches LubeLogger GenericRecordExportModel — all fields as strings."""
+    """Matches LubeLogger GenericRecordExportModel using native numeric JSON types."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     date: str
-    odometer: str
+    odometer: int
     description: str
-    cost: str
+    cost: float
     notes: str = ""
     tags: str = ""
 
@@ -125,19 +145,19 @@ class ServiceRecordPayload(BaseModel):
         """Create a payload from a validated ServiceRecordModel."""
         return cls(
             date=record.date,
-            odometer=str(record.odometer),
+            odometer=record.odometer,
             description=record.description,
-            cost=_format_lubelogger_decimal(record.cost),
+            cost=record.cost,
         )
 
 
 class OdometerRecordPayload(BaseModel):
-    """Matches LubeLogger OdometerRecordExportModel — all fields as strings."""
+    """Matches LubeLogger OdometerRecordExportModel using native integer odometer."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     date: str
-    odometer: str
+    odometer: int
     notes: str = ""
     tags: str = ""
 
@@ -146,5 +166,5 @@ class OdometerRecordPayload(BaseModel):
         """Create a payload from a validated OdometerRecordModel."""
         return cls(
             date=record.date,
-            odometer=str(record.odometer),
+            odometer=record.odometer,
         )
