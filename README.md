@@ -38,7 +38,7 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 | `/start` | Welcome message, prompts vehicle selection |
 | `/help` | Show available commands and usage |
 | `/vehicle` | Select active vehicle via inline keyboard |
-| `/fuel <odo> <liters> <cost> [options]` | Log a fuel fill-up; optional `--date YYYY-MM-DD` and `--missed` |
+| `/fuel <odo> <quantity> <cost> [options]` | Log a fuel fill-up; optional `--date YYYY-MM-DD` and `--missed` |
 | `/service <odo> "<desc>" <cost>` | Log a maintenance record |
 | `/km <odo>` | Log an odometer reading |
 | `/last fuel` | Show latest fuel record |
@@ -77,6 +77,22 @@ All data-entry commands also work without arguments — the bot will guide you t
 | `QUEUE_RETRY_INTERVAL` | No | `300` | Seconds between queue retry attempts |
 | `HTTP_TIMEOUT` | No | `60` | HTTP request timeout in seconds |
 | `MAX_RETRY_ATTEMPTS` | No | `3` | Max retries before marking a record as failed |
+| `DISTANCE_UNIT` | No | `km` | Distance label shown in messages, e.g. `mi` (see [Units](#units)) |
+| `VOLUME_UNIT` | No | `L` | Fuel quantity label, e.g. `gal` or `kWh` |
+| `CURRENCY_SYMBOL` | No | `€` | Currency symbol shown before costs, e.g. `$` or `£` |
+
+### Units
+
+The bot never converts values: numbers go to LubeLogger exactly as you type them, and `/last` shows them as stored. `DISTANCE_UNIT`, `VOLUME_UNIT` and `CURRENCY_SYMBOL` only change the labels in the bot's messages, so set them to the units you use in LubeLogger. Each label can be 1–10 characters.
+
+| Setup | `DISTANCE_UNIT` | `VOLUME_UNIT` | `CURRENCY_SYMBOL` |
+|-------|-----------------|---------------|-------------------|
+| Default (metric, euro) | `km` | `L` | `€` |
+| United States | `mi` | `gal` | `$` |
+| United Kingdom | `mi` | `L` | `£` |
+| Canada / Australia | `km` | `L` | `$` |
+
+The labels apply to every vehicle. If all your vehicles are electric, `VOLUME_UNIT=kWh` works too.
 
 ## Docker Compose
 

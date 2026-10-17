@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import ConfigDict, Field, SecretStr, field_validator, model_validator
+from pydantic import ConfigDict, Field, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings.sources.base import PydanticBaseSettingsSource
@@ -12,6 +12,14 @@ from pydantic_settings.sources.providers.dotenv import DotEnvSettingsSource
 from pydantic_settings.sources.providers.env import EnvSettingsSource
 
 from bot.exceptions import ConfigurationError
+from bot.units import (
+    DEFAULT_CURRENCY_SYMBOL,
+    DEFAULT_DISTANCE_UNIT,
+    DEFAULT_VOLUME_UNIT,
+    DisplayUnits,
+)
+
+_MAX_UNIT_LABEL_LENGTH = 10
 
 
 def _parse_comma_ids(value: object) -> object:
@@ -66,8 +74,20 @@ class BotConfig(BaseSettings):
     http_timeout: int = Field(default=60, gt=0)
     max_retry_attempts: int = Field(default=3, gt=0)
     db_path: str = "/data/bot.db"
+    distance_unit: str = DEFAULT_DISTANCE_UNIT
+    volume_unit: str = DEFAULT_VOLUME_UNIT
+    currency_symbol: str = DEFAULT_CURRENCY_SYMBOL
 
     model_config = ConfigDict(env_prefix="", env_file=".env")
+
+    @property
+    def display_units(self) -> DisplayUnits:
+        """Unit labels shown in bot messages."""
+        return DisplayUnits(
+            distance=self.distance_unit,
+            volume=self.volume_unit,
+            currency=self.currency_symbol,
+        )
 
     @model_validator(mode="after")
     def basic_credentials_are_complete(self) -> Self:
@@ -83,6 +103,16 @@ class BotConfig(BaseSettings):
         if any(user_id <= 0 for user_id in value):
             raise ValueError("ALLOWED_USER_IDS must contain positive Telegram user IDs")
         return value
+
+    @field_validator("distance_unit", "volume_unit", "currency_symbol")
+    @classmethod
+    def unit_labels_must_be_short(cls, value: str, info: ValidationInfo) -> str:
+        """Strip a display unit label and reject blank, multi-line or overly long values."""
+        label = value.strip()
+        if not label or len(label) > _MAX_UNIT_LABEL_LENGTH or not label.isprintable():
+            name = (info.field_name or "unit label").upper()
+            raise ValueError(f"{name} must be 1-{_MAX_UNIT_LABEL_LENGTH} printable characters")
+        return label
 
     @classmethod
     def settings_customise_sources(

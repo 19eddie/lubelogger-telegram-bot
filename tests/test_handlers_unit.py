@@ -24,8 +24,10 @@ from bot.handlers.fuel import (
     fuel_date_step,
     fuel_full_tank_callback,
     fuel_full_tank_step,
+    fuel_liters_step,
     fuel_missed_fuel_up_callback,
     fuel_missed_fuel_up_step,
+    fuel_odometer_step,
     fuel_today_date_step,
     get_fuel_conversation_handler,
 )
@@ -41,7 +43,10 @@ from bot.handlers.fuel import (
 from bot.handlers.odometer import ODOMETER as KM_ODOMETER
 from bot.handlers.odometer import km_command
 from bot.handlers.service import ODOMETER as SERVICE_ODOMETER
-from bot.handlers.service import service_command
+from bot.handlers.service import service_command, service_description
+from bot.units import DISPLAY_UNITS_KEY, DisplayUnits
+
+IMPERIAL_UNITS = DisplayUnits(distance="mi", volume="gal", currency="$")
 
 
 def _make_update_and_context(
@@ -369,3 +374,84 @@ class TestFuelInlineBooleanCallbacks:
             isinstance(handler, CallbackQueryHandler)
             for handler in conversation_handler.states[FUEL_MISSED_FUEL_UP]
         )
+
+
+class TestDisplayUnitLabels:
+    """Saved-record messages and guided prompts use the configured unit labels."""
+
+    async def test_fuel_saved_message_uses_configured_units(self) -> None:
+        update, context = _make_update_and_context(
+            text="/fuel 45000 12.5 45.90", args=["45000", "12.5", "45.90"]
+        )
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+
+        await fuel_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert msg == "✓ Fuel record saved: 12.5 gal @ $45.9, odo 45000 mi"
+
+    async def test_fuel_saved_message_defaults_to_metric_units(self) -> None:
+        update, context = _make_update_and_context(
+            text="/fuel 45000 42.5 78.90", args=["45000", "42.5", "78.90"]
+        )
+
+        await fuel_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert msg == "✓ Fuel record saved: 42.5 L @ €78.9, odo 45000 km"
+
+    async def test_fuel_prompts_use_configured_units(self) -> None:
+        update, context = _make_update_and_context()
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+
+        update.message.text = "2024-01-15"
+        await fuel_date_step(update, context)
+        update.message.text = "45000"
+        await fuel_odometer_step(update, context)
+        update.message.text = "12.5"
+        await fuel_liters_step(update, context)
+
+        prompts = [call.args[0] for call in update.message.reply_text.call_args_list]
+        assert prompts == [
+            "Enter the odometer reading (mi):",
+            "Enter the fuel quantity (gal):",
+            "Enter the total cost ($):",
+        ]
+
+    async def test_service_saved_message_uses_configured_units(self) -> None:
+        update, context = _make_update_and_context(text='/service 45100 "Oil change" 89.00')
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+
+        await service_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert msg == "✓ Service record saved: Oil change @ $89.0, odo 45100 mi"
+
+    async def test_service_prompts_use_configured_units(self) -> None:
+        update, context = _make_update_and_context(text="/service")
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+
+        await service_command(update, context)
+        update.message.text = "Oil change"
+        await service_description(update, context)
+
+        prompts = [call.args[0] for call in update.message.reply_text.call_args_list]
+        assert prompts == ["Enter the odometer reading (mi):", "Enter the cost ($):"]
+
+    async def test_odometer_saved_message_uses_configured_units(self) -> None:
+        update, context = _make_update_and_context(text="/km 45200")
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+
+        await km_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert msg == "✓ Odometer record saved: 45200 mi"
+
+    async def test_odometer_prompt_uses_configured_units(self) -> None:
+        update, context = _make_update_and_context(text="/km")
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+
+        await km_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert msg == "Enter the current odometer reading (mi):"

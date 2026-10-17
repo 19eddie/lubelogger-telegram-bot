@@ -21,7 +21,7 @@ from bot.exceptions import (
     LubeLoggerUnreachableError,
     ParseError,
 )
-from bot.i18n import get_text
+from bot.i18n import get_text, get_text_with_units
 from bot.models.payloads import ServiceRecordPayload
 from bot.models.validators import ServiceRecordModel
 from bot.services.command_parser import CommandParser
@@ -76,7 +76,8 @@ async def _submit_service_record(
     try:
         await client.add_service_record(vehicle_id, payload)
         await update.message.reply_text(
-            get_text(
+            get_text_with_units(
+                context.bot_data,
                 "service_saved",
                 lang,
                 description=record.description,
@@ -111,7 +112,9 @@ async def service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if not remaining_args:
         context.user_data["service_vehicle_id"] = vehicle_id
-        await update.message.reply_text(get_text("service_prompt_odometer", lang))
+        await update.message.reply_text(
+            get_text_with_units(context.bot_data, "service_prompt_odometer", lang)
+        )
         return ODOMETER
 
     try:
@@ -165,7 +168,9 @@ async def service_description(update: Update, context: ContextTypes.DEFAULT_TYPE
         return DESCRIPTION
 
     context.user_data["service_description"] = text
-    await update.message.reply_text(get_text("service_prompt_cost", lang))
+    await update.message.reply_text(
+        get_text_with_units(context.bot_data, "service_prompt_cost", lang)
+    )
     return COST
 
 

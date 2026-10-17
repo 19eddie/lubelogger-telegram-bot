@@ -25,6 +25,7 @@ from bot.services.config_store import ConfigStore
 from bot.services.database import init_db
 from bot.services.lubelogger_client import LubeLoggerClient
 from bot.services.queue_service import QueueService
+from bot.units import DISPLAY_UNITS_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,7 @@ def main() -> None:
         application.bot_data["queue_service"] = queue_service
         application.bot_data["config_store"] = config_store
         application.bot_data["allowed_user_ids"] = config.allowed_user_ids
+        application.bot_data[DISPLAY_UNITS_KEY] = config.display_units
 
         if application.job_queue is not None:
             application.job_queue.run_repeating(

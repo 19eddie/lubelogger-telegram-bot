@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
+
+from bot.units import get_display_units
 
 _LOCALES_DIR = Path(__file__).parent / "locales"
 _cache: dict[str, dict[str, str]] = {}
@@ -25,3 +28,21 @@ def get_text(key: str, lang: str = "en", **kwargs: str | int | float) -> str:
     messages = _load(lang)
     template = messages.get(key) or _load("en").get(key, key)
     return template.format(**kwargs) if kwargs else template
+
+
+def get_text_with_units(
+    bot_data: Mapping[str, object],
+    key: str,
+    lang: str = "en",
+    **kwargs: str | int | float,
+) -> str:
+    """Get a localized message, also filling {distance_unit}, {volume_unit} and {currency}."""
+    units = get_display_units(bot_data)
+    return get_text(
+        key,
+        lang,
+        distance_unit=units.distance,
+        volume_unit=units.volume,
+        currency=units.currency,
+        **kwargs,
+    )
