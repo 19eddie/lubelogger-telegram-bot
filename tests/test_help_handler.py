@@ -40,6 +40,8 @@ class TestHelpCommand:
         assert (
             "<code>&lt;odo&gt; &lt;quantity&gt; &lt;cost&gt; [--date YYYY-MM-DD] [--missed]</code>"
         ) in message
+        assert "/odo <code>&lt;odo&gt;</code>" in message
+        assert "/km" not in message
 
     def test_help_message_escapes_html_placeholders(self) -> None:
         """Usage placeholders are escaped so Telegram does not parse them as tags."""

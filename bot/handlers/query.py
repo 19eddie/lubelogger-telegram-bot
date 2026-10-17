@@ -56,20 +56,20 @@ async def last_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 )
             else:
                 await update.message.reply_text(get_text("last_fuel_empty", lang))
-        elif subcommand == "km":
+        elif subcommand == "odo":
             record = await client.get_latest_odometer(vehicle_id)
             if record:
                 await update.message.reply_text(
                     get_text_with_units(
                         context.bot_data,
-                        "last_km",
+                        "last_odo",
                         lang,
                         date=record.get("date", "N/A"),
                         odometer=record.get("odometer", "N/A"),
                     )
                 )
             else:
-                await update.message.reply_text(get_text("last_km_empty", lang))
+                await update.message.reply_text(get_text("last_odo_empty", lang))
         else:
             await update.message.reply_text(get_text("usage_last", lang))
     except LubeLoggerUnreachableError:

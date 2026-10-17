@@ -174,15 +174,15 @@ class CommandParser:
         text = args.strip()
         if not text:
             raise ParseError(
-                command="/km",
-                hint="Usage: /km <odometer>",
+                command="/odo",
+                hint="Usage: /odo <odometer>",
             )
 
         parts = text.split()
         if len(parts) != 1:
             raise ParseError(
-                command="/km",
-                hint="Usage: /km <odometer>",
+                command="/odo",
+                hint="Usage: /odo <odometer>",
             )
 
         odometer = CommandParser.normalize_decimal(parts[0])
@@ -191,8 +191,8 @@ class CommandParser:
             float(odometer)
         except ValueError:
             raise ParseError(
-                command="/km",
-                hint="Usage: /km <odometer> — value must be a number",
+                command="/odo",
+                hint="Usage: /odo <odometer> — value must be a number",
             )
 
         return OdometerInput(odometer=odometer)

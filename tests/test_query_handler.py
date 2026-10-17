@@ -91,9 +91,9 @@ class TestLastCommand:
         msg = update.message.reply_text.call_args[0][0]
         assert "No fuel records found" in msg
 
-    async def test_last_km_displays_record(self) -> None:
-        """'/last km' should display the latest odometer record."""
-        update, context = _make_update_and_context(args=["km"])
+    async def test_last_odo_displays_record(self) -> None:
+        """'/last odo' should display the latest odometer record."""
+        update, context = _make_update_and_context(args=["odo"])
         context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
             return_value={
                 "date": "2024-01-15",
@@ -125,9 +125,9 @@ class TestLastCommand:
         msg = update.message.reply_text.call_args[0][0]
         assert msg == "⛽ Last fuel: 2024-01-15 — 12.5 gal @ $45.9, odo 45000 mi"
 
-    async def test_last_km_uses_configured_units(self) -> None:
-        """'/last km' labels the stored odometer with the configured distance unit."""
-        update, context = _make_update_and_context(args=["km"])
+    async def test_last_odo_uses_configured_units(self) -> None:
+        """'/last odo' labels the stored odometer with the configured distance unit."""
+        update, context = _make_update_and_context(args=["odo"])
         context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
         context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
             return_value={"date": "2024-01-15", "odometer": 45000}
@@ -138,9 +138,19 @@ class TestLastCommand:
         msg = update.message.reply_text.call_args[0][0]
         assert msg == "🚧 Last odometer: 2024-01-15 — 45000 mi"
 
-    async def test_last_km_empty(self) -> None:
-        """'/last km' with no records shows empty message."""
+    async def test_last_km_shows_usage(self) -> None:
+        """'/last km' was replaced by '/last odo' and now shows the usage hint."""
         update, context = _make_update_and_context(args=["km"])
+
+        await last_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert "/last odo" in msg
+        context.bot_data["lubelogger_client"].get_latest_odometer.assert_not_awaited()
+
+    async def test_last_odo_empty(self) -> None:
+        """'/last odo' with no records shows empty message."""
+        update, context = _make_update_and_context(args=["odo"])
         context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(return_value=None)
 
         await last_command(update, context)
@@ -188,9 +198,9 @@ class TestLastCommand:
         msg = update.message.reply_text.call_args[0][0]
         assert "unreachable" in msg.lower() or "unavailable" in msg.lower()
 
-    async def test_last_km_unreachable_shows_error(self) -> None:
-        """'/last km' when LubeLogger is unreachable shows user-friendly message."""
-        update, context = _make_update_and_context(args=["km"])
+    async def test_last_odo_unreachable_shows_error(self) -> None:
+        """'/last odo' when LubeLogger is unreachable shows user-friendly message."""
+        update, context = _make_update_and_context(args=["odo"])
         context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
             side_effect=LubeLoggerUnreachableError("timeout")
         )
