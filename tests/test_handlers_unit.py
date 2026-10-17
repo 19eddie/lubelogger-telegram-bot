@@ -1,6 +1,6 @@
 """Unit tests for handler conversation flow initiation.
 
-Tests that /fuel, /service, and /km without args start their respective conversation flows.
+Tests that /fuel, /service, and /odo without args start their respective conversation flows.
 """
 
 from __future__ import annotations
@@ -40,8 +40,8 @@ from bot.handlers.fuel import (
 from bot.handlers.fuel import (
     ODOMETER as FUEL_ODOMETER,
 )
-from bot.handlers.odometer import ODOMETER as KM_ODOMETER
-from bot.handlers.odometer import km_command
+from bot.handlers.odometer import ODOMETER as ODO_ODOMETER
+from bot.handlers.odometer import get_odometer_conversation_handler, odo_command
 from bot.handlers.service import ODOMETER as SERVICE_ODOMETER
 from bot.handlers.service import service_command, service_description
 from bot.units import DISPLAY_UNITS_KEY, DisplayUnits
@@ -195,25 +195,31 @@ class TestServiceConversationInitiation:
 
 
 class TestOdometerConversationInitiation:
-    """Tests for /km command conversation flow initiation (Requirement 6.2)."""
+    """Tests for /odo command conversation flow initiation (Requirement 6.2)."""
 
-    async def test_km_without_args_starts_conversation(self) -> None:
-        """/km without args should return ODOMETER state to start conversation."""
-        update, context = _make_update_and_context(text="/km", args=[])
+    async def test_odo_without_args_starts_conversation(self) -> None:
+        """/odo without args should return ODOMETER state to start conversation."""
+        update, context = _make_update_and_context(text="/odo", args=[])
 
-        result = await km_command(update, context)
+        result = await odo_command(update, context)
 
-        assert result == KM_ODOMETER
+        assert result == ODO_ODOMETER
         update.message.reply_text.assert_called_once()
 
-    async def test_km_without_args_prompts_odometer(self) -> None:
-        """/km without args should prompt user for odometer reading."""
-        update, context = _make_update_and_context(text="/km", args=[])
+    async def test_odo_without_args_prompts_odometer(self) -> None:
+        """/odo without args should prompt user for odometer reading."""
+        update, context = _make_update_and_context(text="/odo", args=[])
 
-        await km_command(update, context)
+        await odo_command(update, context)
 
         msg = update.message.reply_text.call_args[0][0]
         assert msg  # Non-empty response
+
+    def test_odo_replaces_km_command(self) -> None:
+        """Only /odo starts the odometer flow; the old /km command is gone."""
+        (entry_point,) = get_odometer_conversation_handler().entry_points
+
+        assert entry_point.commands == frozenset({"odo"})
 
 
 class TestFuelMetadataConversation:
@@ -439,19 +445,19 @@ class TestDisplayUnitLabels:
         assert prompts == ["Enter the odometer reading (mi):", "Enter the cost ($):"]
 
     async def test_odometer_saved_message_uses_configured_units(self) -> None:
-        update, context = _make_update_and_context(text="/km 45200")
+        update, context = _make_update_and_context(text="/odo 45200")
         context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
 
-        await km_command(update, context)
+        await odo_command(update, context)
 
         msg = update.message.reply_text.call_args[0][0]
         assert msg == "✓ Odometer record saved: 45200 mi"
 
     async def test_odometer_prompt_uses_configured_units(self) -> None:
-        update, context = _make_update_and_context(text="/km")
+        update, context = _make_update_and_context(text="/odo")
         context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
 
-        await km_command(update, context)
+        await odo_command(update, context)
 
         msg = update.message.reply_text.call_args[0][0]
         assert msg == "Enter the current odometer reading (mi):"

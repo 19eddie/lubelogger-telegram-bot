@@ -1,4 +1,4 @@
-"""Odometer record handler — inline args or conversation flow for /km command."""
+"""Odometer record handler — inline args or conversation flow for /odo command."""
 
 from __future__ import annotations
 
@@ -107,8 +107,8 @@ async def _submit_odometer(
         await update.message.reply_text(get_text("lubelogger_error", lang))
 
 
-async def km_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /km with inline args or start the guided conversation."""
+async def odo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle /odo with inline args or start the guided conversation."""
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
@@ -124,7 +124,7 @@ async def km_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             if active_vehicle is None:
                 await update.message.reply_text(get_text("no_vehicle", lang))
                 return ConversationHandler.END
-        context.user_data["km_vehicle_override"] = vehicle_override
+        context.user_data["odo_vehicle_override"] = vehicle_override
         await update.message.reply_text(
             get_text_with_units(context.bot_data, "prompt_odometer", lang)
         )
@@ -133,7 +133,7 @@ async def km_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         parsed = CommandParser.parse_odometer(remaining_args)
     except ParseError:
-        await update.message.reply_text(get_text("usage_km", lang))
+        await update.message.reply_text(get_text("usage_odo", lang))
         return ConversationHandler.END
 
     await _submit_odometer(update, context, parsed.odometer, vehicle_override)
@@ -151,11 +151,11 @@ async def odometer_received(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await update.message.reply_text(get_text("invalid_odometer", lang))
         return ODOMETER
 
-    vehicle_override = context.user_data.get("km_vehicle_override")
+    vehicle_override = context.user_data.get("odo_vehicle_override")
     try:
         await _submit_odometer(update, context, str(value), vehicle_override)
     finally:
-        context.user_data.pop("km_vehicle_override", None)
+        context.user_data.pop("odo_vehicle_override", None)
     return ConversationHandler.END
 
 
@@ -164,7 +164,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     config_store: ConfigStore = context.bot_data["config_store"]
     user_id = update.effective_user.id
     lang = await config_store.get_language(user_id)
-    context.user_data.pop("km_vehicle_override", None)
+    context.user_data.pop("odo_vehicle_override", None)
     await update.message.reply_text(get_text("conversation_cancelled", lang))
     return ConversationHandler.END
 
@@ -172,9 +172,9 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 def get_odometer_conversation_handler(
     auth_filter: filters.BaseFilter | None = None,
 ) -> ConversationHandler:
-    """Create and return the ConversationHandler for /km command."""
+    """Create and return the ConversationHandler for /odo command."""
     return ConversationHandler(
-        entry_points=[CommandHandler("km", km_command, filters=auth_filter)],
+        entry_points=[CommandHandler("odo", odo_command, filters=auth_filter)],
         states={
             ODOMETER: [MessageHandler(filters.TEXT & ~filters.COMMAND, odometer_received)],
         },

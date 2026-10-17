@@ -115,7 +115,7 @@ class TestParseOdometer:
     def test_empty_string(self) -> None:
         with pytest.raises(ParseError) as exc_info:
             CommandParser.parse_odometer("")
-        assert exc_info.value.command == "/km"
+        assert exc_info.value.command == "/odo"
 
     def test_multiple_values(self) -> None:
         with pytest.raises(ParseError):

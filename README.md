@@ -40,9 +40,9 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 | `/vehicle` | Select active vehicle via inline keyboard |
 | `/fuel <odo> <quantity> <cost> [options]` | Log a fuel fill-up; optional `--date YYYY-MM-DD` and `--missed` |
 | `/service <odo> "<desc>" <cost>` | Log a maintenance record |
-| `/km <odo>` | Log an odometer reading |
+| `/odo <odo>` | Log an odometer reading |
 | `/last fuel` | Show latest fuel record |
-| `/last km` | Show latest odometer record |
+| `/last odo` | Show latest odometer record |
 | `/status` | Check LubeLogger connectivity and queue status |
 | `/queue` | Show pending queued records |
 | `/lang` | Change bot language (English / Italian) |
@@ -56,7 +56,7 @@ If LubeLogger runs in the same Docker Compose stack, use the service name as URL
 /fuel 45000 42.5 78.90 --date 2026-08-25 --missed # Mark previous fuel-up as missed
 /fuel 45000 42,5 78,90                         # Comma decimals work too
 /service 45100 "Oil change" 89.00
-/km 45200
+/odo 45200
 /last fuel
 /status
 ```

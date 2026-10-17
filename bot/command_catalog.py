@@ -35,9 +35,9 @@ COMMAND_CATALOG: tuple[CommandSpec, ...] = (
         section_key="help_section_records",
     ),
     CommandSpec(
-        "km",
-        "help_km",
-        usage_key="help_usage_km",
+        "odo",
+        "help_odo",
+        usage_key="help_usage_odo",
         section_key="help_section_records",
     ),
     CommandSpec(

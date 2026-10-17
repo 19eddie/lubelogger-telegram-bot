@@ -14,7 +14,7 @@ UNIT_KEYS = [
     "service_saved",
     "odometer_saved",
     "last_fuel",
-    "last_km",
+    "last_odo",
     "prompt_odometer",
     "fuel_ask_odometer",
     "fuel_ask_liters",
@@ -93,6 +93,10 @@ class TestGetText:
     def test_locales_have_no_hardcoded_currency(self, lang: str) -> None:
         assert not [key for key, text in _load(lang).items() if "€" in text]
 
+    @pytest.mark.parametrize("lang", ["en", "it"])
+    def test_locales_no_longer_mention_km(self, lang: str) -> None:
+        assert not [key for key, text in _load(lang).items() if "km" in key or "km" in text]
+
     def test_vehicle_selected_placeholder(self) -> None:
         result = get_text("vehicle_selected", lang="en", vehicle_name="2020 Toyota Yaris")
         assert "2020 Toyota Yaris" in result
@@ -127,8 +131,8 @@ class TestGetText:
             "help_usage_fuel",
             "help_service",
             "help_usage_service",
-            "help_km",
-            "help_usage_km",
+            "help_odo",
+            "help_usage_odo",
             "help_last",
             "help_usage_last",
             "help_status",
@@ -149,7 +153,9 @@ class TestGetText:
             "invalid_description",
             "usage_fuel",
             "usage_service",
-            "usage_km",
+            "usage_odo",
+            "last_odo",
+            "last_odo_empty",
             "vehicle_selected",
             "vehicle_prompt",
             "no_vehicle",
@@ -191,8 +197,8 @@ class TestGetText:
             "help_usage_fuel",
             "help_service",
             "help_usage_service",
-            "help_km",
-            "help_usage_km",
+            "help_odo",
+            "help_usage_odo",
             "help_last",
             "help_usage_last",
             "help_status",
@@ -213,7 +219,9 @@ class TestGetText:
             "invalid_description",
             "usage_fuel",
             "usage_service",
-            "usage_km",
+            "usage_odo",
+            "last_odo",
+            "last_odo_empty",
             "vehicle_selected",
             "vehicle_prompt",
             "no_vehicle",
