@@ -2,7 +2,31 @@
 
 from __future__ import annotations
 
-from bot.i18n import _cache, get_text
+from string import Formatter
+
+import pytest
+
+from bot.i18n import _cache, _load, get_text, get_text_with_units
+from bot.units import DISPLAY_UNITS_KEY, DisplayUnits
+
+UNIT_KEYS = [
+    "fuel_saved",
+    "service_saved",
+    "odometer_saved",
+    "last_fuel",
+    "last_km",
+    "prompt_odometer",
+    "fuel_ask_odometer",
+    "fuel_ask_liters",
+    "fuel_ask_cost",
+    "service_prompt_odometer",
+    "service_prompt_cost",
+]
+
+
+def _placeholders(template: str) -> set[str]:
+    """Return the {placeholder} names used by a message template."""
+    return {name for _, name, _, _ in Formatter().parse(template) if name}
 
 
 class TestGetText:
@@ -35,16 +59,39 @@ class TestGetText:
         assert result == "nonexistent_key_xyz"
 
     def test_formats_placeholders(self) -> None:
-        result = get_text("fuel_saved", lang="en", liters="42.5", cost="78.90", odometer="45000")
-        assert "42.5" in result
-        assert "78.90" in result
-        assert "45000" in result
+        result = get_text_with_units(
+            {}, "fuel_saved", lang="en", liters="42.5", cost="78.90", odometer="45000"
+        )
+        assert result == "✓ Fuel record saved: 42.5 L @ €78.90, odo 45000 km"
 
     def test_formats_placeholders_italian(self) -> None:
-        result = get_text("fuel_saved", lang="it", liters="42.5", cost="78.90", odometer="45000")
-        assert "42.5" in result
-        assert "78.90" in result
-        assert "45000" in result
+        result = get_text_with_units(
+            {}, "fuel_saved", lang="it", liters="42.5", cost="78.90", odometer="45000"
+        )
+        assert result == "✓ Rifornimento registrato: 42.5 L @ €78.90, odo 45000 km"
+
+    def test_formats_configured_unit_labels(self) -> None:
+        bot_data = {DISPLAY_UNITS_KEY: DisplayUnits(distance="mi", volume="gal", currency="$")}
+        result = get_text_with_units(
+            bot_data, "fuel_saved", lang="en", liters="12.5", cost="45.90", odometer="45000"
+        )
+        assert result == "✓ Fuel record saved: 12.5 gal @ $45.90, odo 45000 mi"
+
+    @pytest.mark.parametrize("lang", ["en", "it"])
+    @pytest.mark.parametrize("key", UNIT_KEYS)
+    def test_unit_keys_use_unit_placeholders(self, key: str, lang: str) -> None:
+        placeholders = _placeholders(_load(lang)[key])
+        assert placeholders & {"distance_unit", "volume_unit", "currency"}
+
+    def test_locales_share_keys_and_placeholders(self) -> None:
+        english, italian = _load("en"), _load("it")
+        assert english.keys() == italian.keys()
+        for key, template in english.items():
+            assert _placeholders(template) == _placeholders(italian[key]), key
+
+    @pytest.mark.parametrize("lang", ["en", "it"])
+    def test_locales_have_no_hardcoded_currency(self, lang: str) -> None:
+        assert not [key for key, text in _load(lang).items() if "€" in text]
 
     def test_vehicle_selected_placeholder(self) -> None:
         result = get_text("vehicle_selected", lang="en", vehicle_name="2020 Toyota Yaris")

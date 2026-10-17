@@ -38,7 +38,7 @@ class TestHelpCommand:
             if command.show_in_help:
                 assert f"/{command.name}" in message
         assert (
-            "<code>&lt;odo&gt; &lt;liters&gt; &lt;cost&gt; [--date YYYY-MM-DD] [--missed]</code>"
+            "<code>&lt;odo&gt; &lt;quantity&gt; &lt;cost&gt; [--date YYYY-MM-DD] [--missed]</code>"
         ) in message
 
     def test_help_message_escapes_html_placeholders(self) -> None:
@@ -67,4 +67,4 @@ class TestHelpCommand:
         assert message == build_help_message("it")
         assert "<b>Comandi disponibili:</b>" in message
         assert "<b>Registrazione</b>" in message
-        assert "<code>&lt;odo&gt; &lt;litri&gt; &lt;costo&gt;" in message
+        assert "<code>&lt;odo&gt; &lt;quantità&gt; &lt;costo&gt;" in message

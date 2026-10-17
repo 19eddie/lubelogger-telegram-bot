@@ -6,6 +6,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 from bot.exceptions import LubeLoggerUnreachableError
 from bot.handlers.query import last_command, queue_command, status_command
+from bot.units import DISPLAY_UNITS_KEY, DisplayUnits
+
+IMPERIAL_UNITS = DisplayUnits(distance="mi", volume="gal", currency="$")
 
 
 def _make_update_and_context(
@@ -103,6 +106,37 @@ class TestLastCommand:
         msg = update.message.reply_text.call_args[0][0]
         assert "45000" in msg
         assert "2024-01-15" in msg
+
+    async def test_last_fuel_uses_configured_units(self) -> None:
+        """'/last fuel' labels the stored values with the configured units."""
+        update, context = _make_update_and_context(args=["fuel"])
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+        context.bot_data["lubelogger_client"].get_latest_gas_record = AsyncMock(
+            return_value={
+                "date": "2024-01-15",
+                "fuelConsumed": 12.5,
+                "cost": 45.9,
+                "odometer": 45000,
+            }
+        )
+
+        await last_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert msg == "⛽ Last fuel: 2024-01-15 — 12.5 gal @ $45.9, odo 45000 mi"
+
+    async def test_last_km_uses_configured_units(self) -> None:
+        """'/last km' labels the stored odometer with the configured distance unit."""
+        update, context = _make_update_and_context(args=["km"])
+        context.bot_data[DISPLAY_UNITS_KEY] = IMPERIAL_UNITS
+        context.bot_data["lubelogger_client"].get_latest_odometer = AsyncMock(
+            return_value={"date": "2024-01-15", "odometer": 45000}
+        )
+
+        await last_command(update, context)
+
+        msg = update.message.reply_text.call_args[0][0]
+        assert msg == "🚧 Last odometer: 2024-01-15 — 45000 mi"
 
     async def test_last_km_empty(self) -> None:
         """'/last km' with no records shows empty message."""

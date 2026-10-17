@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from bot.config import BotConfig, load_config
 from bot.exceptions import ConfigurationError
+from bot.units import DisplayUnits
 
 
 @pytest.fixture(autouse=True)
@@ -52,6 +54,10 @@ class TestBotConfig:
         assert config.http_timeout == 60
         assert config.max_retry_attempts == 3
         assert config.db_path == "/data/bot.db"
+        assert config.distance_unit == "km"
+        assert config.volume_unit == "L"
+        assert config.currency_symbol == "€"
+        assert config.display_units == DisplayUnits()
 
     def test_overrides_defaults(self) -> None:
         env = self._env(
@@ -124,6 +130,50 @@ class TestBotConfig:
             with pytest.raises(ValueError, match="must be set together"):
                 BotConfig()  # type: ignore[call-arg]
 
+    def test_unit_labels_can_be_overridden(self) -> None:
+        env = self._env(DISTANCE_UNIT="mi", VOLUME_UNIT="gal", CURRENCY_SYMBOL="$")
+        with patch.dict(os.environ, env, clear=True):
+            config = BotConfig()  # type: ignore[call-arg]
+        assert config.display_units == DisplayUnits(distance="mi", volume="gal", currency="$")
+
+    def test_unit_labels_are_stripped(self) -> None:
+        env = self._env(DISTANCE_UNIT="  mi  ", VOLUME_UNIT=" US gal ")
+        with patch.dict(os.environ, env, clear=True):
+            config = BotConfig()  # type: ignore[call-arg]
+        assert config.distance_unit == "mi"
+        assert config.volume_unit == "US gal"
+
+    @pytest.mark.parametrize(
+        ("name", "value"),
+        [
+            ("DISTANCE_UNIT", ""),
+            ("VOLUME_UNIT", "   "),
+            ("CURRENCY_SYMBOL", "x" * 11),
+        ],
+    )
+    def test_invalid_unit_labels_are_rejected(self, name: str, value: str) -> None:
+        env = self._env(**{name: value})
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(ValueError, match=name):
+                BotConfig()  # type: ignore[call-arg]
+
+    def test_multiline_unit_label_is_rejected(self) -> None:
+        with patch.dict(os.environ, self._env(), clear=True):
+            with pytest.raises(ValueError, match="DISTANCE_UNIT"):
+                BotConfig(distance_unit="m\ni")  # type: ignore[call-arg]
+
+    def test_reads_utf8_env_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        env_file = tmp_path / ".env"
+        lines = [f"{key}={value}" for key, value in self._env(CURRENCY_SYMBOL="£").items()]
+        env_file.write_text("\n".join(lines), encoding="utf-8")
+        monkeypatch.setattr(
+            "bot.config.BotConfig.model_config",
+            {**BotConfig.model_config, "env_file": str(env_file)},
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            config = BotConfig()  # type: ignore[call-arg]
+        assert config.currency_symbol == "£"
+
 
 class TestLoadConfig:
     """load_config() wraps BotConfig with ConfigurationError."""
@@ -137,6 +187,17 @@ class TestLoadConfig:
             ),
         ):
             with pytest.raises(ConfigurationError):
+                load_config()
+
+    def test_raises_configuration_error_on_invalid_unit_label(self) -> None:
+        env = {
+            "TELEGRAM_BOT_TOKEN": "tok",
+            "LUBELOGGER_URL": "http://localhost:8080",
+            "ALLOWED_USER_IDS": "1",
+            "VOLUME_UNIT": "",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(ConfigurationError, match="VOLUME_UNIT"):
                 load_config()
 
     def test_returns_config_on_valid_env(self) -> None:

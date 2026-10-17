@@ -8,7 +8,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot.exceptions import LubeLoggerApiError, LubeLoggerResponseError, LubeLoggerUnreachableError
-from bot.i18n import get_text
+from bot.i18n import get_text, get_text_with_units
 from bot.services.config_store import ConfigStore
 from bot.services.lubelogger_client import LubeLoggerClient
 from bot.services.queue_service import QueueService
@@ -43,7 +43,8 @@ async def last_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                     missed_value = missed_value.strip().lower() == "true"
                 missed_text = get_text("last_fuel_missed", lang) if missed_value else ""
                 await update.message.reply_text(
-                    get_text(
+                    get_text_with_units(
+                        context.bot_data,
                         "last_fuel",
                         lang,
                         date=record.get("date", "N/A"),
@@ -59,7 +60,8 @@ async def last_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             record = await client.get_latest_odometer(vehicle_id)
             if record:
                 await update.message.reply_text(
-                    get_text(
+                    get_text_with_units(
+                        context.bot_data,
                         "last_km",
                         lang,
                         date=record.get("date", "N/A"),

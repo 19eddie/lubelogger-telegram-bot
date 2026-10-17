@@ -24,7 +24,7 @@ from bot.exceptions import (
     LubeLoggerUnreachableError,
     ParseError,
 )
-from bot.i18n import get_text
+from bot.i18n import get_text, get_text_with_units
 from bot.models.payloads import GasRecordPayload
 from bot.models.validators import GasRecordModel, validate_fuel_date
 from bot.services.command_parser import CommandParser
@@ -141,9 +141,14 @@ def _map_validation_error(exc: ValidationError, lang: str) -> str:
     return get_text("unexpected_error", lang)
 
 
-def _fuel_saved_message(record: GasRecordModel, lang: str) -> str:
+def _fuel_saved_message(
+    context: ContextTypes.DEFAULT_TYPE,
+    record: GasRecordModel,
+    lang: str,
+) -> str:
     """Build the confirmation message for a saved fuel record."""
-    return get_text(
+    return get_text_with_units(
+        context.bot_data,
         "fuel_saved",
         lang,
         liters=str(record.liters),
@@ -171,7 +176,7 @@ async def _queue_or_confirm_ambiguous_fuel(
                 record.date,
                 record.odometer,
             )
-            await reply_message.reply_text(_fuel_saved_message(record, lang))
+            await reply_message.reply_text(_fuel_saved_message(context, record, lang))
             return
     except (LubeLoggerUnreachableError, LubeLoggerApiError, LubeLoggerResponseError) as exc:
         logger.warning(
@@ -198,7 +203,7 @@ async def _submit_fuel_record(
     client: LubeLoggerClient = context.bot_data["lubelogger_client"]
     try:
         await client.add_gas_record(vehicle_id, payload)
-        await reply_message.reply_text(_fuel_saved_message(record, lang))
+        await reply_message.reply_text(_fuel_saved_message(context, record, lang))
     except (LubeLoggerUnreachableError, LubeLoggerResponseError):
         await _queue_or_confirm_ambiguous_fuel(
             context, record, payload, vehicle_id, user_id, lang, reply_message
@@ -277,7 +282,7 @@ async def fuel_today_date_step(update: Update, context: ContextTypes.DEFAULT_TYP
     lang = await config_store.get_language(user_id)
 
     context.user_data["fuel_date"] = date.today().isoformat()
-    await query.edit_message_text(get_text("fuel_ask_odometer", lang))
+    await query.edit_message_text(get_text_with_units(context.bot_data, "fuel_ask_odometer", lang))
     return ODOMETER
 
 
@@ -296,7 +301,9 @@ async def fuel_date_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return DATE
 
     context.user_data["fuel_date"] = validated_date
-    await update.message.reply_text(get_text("fuel_ask_odometer", lang))
+    await update.message.reply_text(
+        get_text_with_units(context.bot_data, "fuel_ask_odometer", lang)
+    )
     return ODOMETER
 
 
@@ -312,7 +319,7 @@ async def fuel_odometer_step(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return ODOMETER
 
     context.user_data["fuel_odometer"] = value
-    await update.message.reply_text(get_text("fuel_ask_liters", lang))
+    await update.message.reply_text(get_text_with_units(context.bot_data, "fuel_ask_liters", lang))
     return LITERS
 
 
@@ -331,7 +338,7 @@ async def fuel_liters_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return LITERS
 
     context.user_data["fuel_liters"] = value
-    await update.message.reply_text(get_text("fuel_ask_cost", lang))
+    await update.message.reply_text(get_text_with_units(context.bot_data, "fuel_ask_cost", lang))
     return COST
 
 

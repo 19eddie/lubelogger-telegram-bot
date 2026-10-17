@@ -21,7 +21,7 @@ from bot.exceptions import (
     LubeLoggerUnreachableError,
     ParseError,
 )
-from bot.i18n import get_text
+from bot.i18n import get_text, get_text_with_units
 from bot.models.payloads import OdometerRecordPayload
 from bot.models.validators import OdometerRecordModel
 from bot.services.command_parser import CommandParser
@@ -92,7 +92,9 @@ async def _submit_odometer(
     payload = OdometerRecordPayload.from_validated(record)
     try:
         await client.add_odometer_record(vehicle_id, payload)
-        await update.message.reply_text(get_text("odometer_saved", lang, odometer=record.odometer))
+        await update.message.reply_text(
+            get_text_with_units(context.bot_data, "odometer_saved", lang, odometer=record.odometer)
+        )
     except (LubeLoggerUnreachableError, LubeLoggerResponseError):
         await queue_service.enqueue(
             user_id=user_id,
@@ -123,7 +125,9 @@ async def km_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                 await update.message.reply_text(get_text("no_vehicle", lang))
                 return ConversationHandler.END
         context.user_data["km_vehicle_override"] = vehicle_override
-        await update.message.reply_text(get_text("prompt_odometer", lang))
+        await update.message.reply_text(
+            get_text_with_units(context.bot_data, "prompt_odometer", lang)
+        )
         return ODOMETER
 
     try:
