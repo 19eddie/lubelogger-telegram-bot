@@ -44,7 +44,7 @@ async def lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     query = update.callback_query
     user_id = update.effective_user.id
     allowed_ids = context.bot_data.get("allowed_user_ids")
-    if allowed_ids is not None and user_id not in allowed_ids:
+    if not allowed_ids or user_id not in allowed_ids:
         await query.answer()
         return
 
