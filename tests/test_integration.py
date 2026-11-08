@@ -225,6 +225,7 @@ class TestVehicleSelectionFlow:
         context.bot_data = {
             "config_store": config_store,
             "lubelogger_client": lubelogger_client,
+            "allowed_user_ids": [123],
         }
 
         await vehicle_callback(update, context)
@@ -412,3 +413,48 @@ class TestAmbiguousFuelPost:
         lubelogger_client.gas_record_exists.assert_awaited_once()
         message = update.message.reply_text.call_args[0][0]
         assert "offline" in message.lower() or "sync" in message.lower()
+
+
+class TestVehicleCallbackAuthorization:
+    async def test_unauthorized_user_cannot_select_vehicle(self) -> None:
+        """Reject vehicle selection from a non-whitelisted user."""
+        update = MagicMock()
+        update.effective_user.id = 999
+        update.callback_query.data = "vehicle:1"
+        update.callback_query.answer = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock()
+
+        context = MagicMock()
+        context.bot_data = {
+            "allowed_user_ids": [123],
+            "config_store": AsyncMock(),
+            "lubelogger_client": AsyncMock(),
+        }
+
+        await vehicle_callback(update, context)
+
+        update.callback_query.answer.assert_awaited_once()
+        update.callback_query.edit_message_text.assert_not_awaited()
+        context.bot_data["config_store"].set_active_vehicle.assert_not_awaited()
+        context.bot_data["lubelogger_client"].get_vehicles.assert_not_awaited()
+
+    async def test_missing_whitelist_denies_vehicle_selection(self) -> None:
+        """Reject vehicle selection when the whitelist is missing."""
+        update = MagicMock()
+        update.effective_user.id = 123
+        update.callback_query.data = "vehicle:1"
+        update.callback_query.answer = AsyncMock()
+        update.callback_query.edit_message_text = AsyncMock()
+
+        context = MagicMock()
+        context.bot_data = {
+            "config_store": AsyncMock(),
+            "lubelogger_client": AsyncMock(),
+        }
+
+        await vehicle_callback(update, context)
+
+        update.callback_query.answer.assert_awaited_once()
+        update.callback_query.edit_message_text.assert_not_awaited()
+        context.bot_data["config_store"].set_active_vehicle.assert_not_awaited()
+        context.bot_data["lubelogger_client"].get_vehicles.assert_not_awaited()
